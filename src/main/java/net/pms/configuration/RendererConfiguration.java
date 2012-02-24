@@ -239,6 +239,7 @@ public class RendererConfiguration {
 
 	private static final String MPEGPSAC3 = "MPEGAC3";
 	private static final String MPEGTSAC3 = "MPEGTSAC3";
+	private static final String MP4AVCAAC = "MP4AVCAAC";
 	private static final String WMV = "WMV";
 	private static final String LPCM = "LPCM";
 	private static final String WAV = "WAV";
@@ -399,6 +400,10 @@ public class RendererConfiguration {
 		return getVideoTranscode().startsWith(WMV);
 	}
 
+	public boolean isTranscodeToMP4AVCAAC() {
+		return getVideoTranscode().startsWith(MP4AVCAAC);
+	}
+
 	public boolean isTranscodeToAC3() {
 		return isTranscodeToMPEGPSAC3() || isTranscodeToMPEGTSAC3();
 	}
@@ -451,6 +456,8 @@ public class RendererConfiguration {
 					mimetype = getFormatConfiguration().match(FormatConfiguration.MPEGTS, FormatConfiguration.MPEG2, FormatConfiguration.AC3);
 				} else if (isTranscodeToWMV()) {
 					mimetype = getFormatConfiguration().match(FormatConfiguration.WMV, FormatConfiguration.WMV, FormatConfiguration.WMA);
+				} else if (isTranscodeToMP4AVCAAC()) {
+					mimetype = getFormatConfiguration().match(FormatConfiguration.MP4, FormatConfiguration.H264, FormatConfiguration.AAC);
 				}
 			} else if (mimetype != null && mimetype.equals(HTTPResource.AUDIO_TRANSCODE)) {
 				mimetype = getFormatConfiguration().match(FormatConfiguration.LPCM, null, null);
@@ -473,6 +480,8 @@ public class RendererConfiguration {
 			mimetype = HTTPResource.MPEG_TYPEMIME;
 			if (isTranscodeToWMV()) {
 				mimetype = HTTPResource.WMV_TYPEMIME;
+			} else if (isTranscodeToMP4AVCAAC()) {
+				mimetype = HTTPResource.MP4_TYPEMIME;
 			}
 		} else if (mimetype != null && mimetype.equals(HTTPResource.AUDIO_TRANSCODE)) {
 			mimetype = HTTPResource.AUDIO_LPCM_TYPEMIME;
