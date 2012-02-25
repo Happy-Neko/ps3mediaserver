@@ -137,6 +137,7 @@ public class MEncoderVideo extends Player {
 	protected boolean dvd;
 	protected boolean oaccopy;
 	protected boolean mpegts;
+	protected boolean mp4avcaac;
 	protected boolean wmv;
 	protected String overriddenMainArgs[];
 
@@ -1004,11 +1005,10 @@ public class MEncoderVideo extends Player {
 		return new String[]{
 			"-quiet",
 			"-oac", oaccopy ? "copy" : (pcm ? "pcm" : "lavc"),
-			"-of", (wmv || mpegts) ? "lavf" : (pcm && avisynth()) ? "avi" : (((pcm || dts || mux) ? "rawvideo" : "mpeg")),
-			(wmv || mpegts) ? "-lavfopts" : "-quiet",
-			wmv ? "format=asf" : (mpegts ? "format=mpegts" : "-quiet"),
-			"-mpegopts", "format=mpeg2:muxrate=500000:vbuf_size=1194:abuf_size=64",
-			"-ovc", (mux || ovccopy) ? "copy" : "lavc"
+			"-of", (wmv || mpegts || mp4avcaac) ? "lavf" : (pcm && avisynth()) ? "avi" : (((pcm || dts || mux) ? "rawvideo" : "mpeg")),
+			(wmv || mpegts || mp4avcaac) ? "-lavfopts" : "-mpegopts",
+			wmv ? "format=asf" : (mpegts ? "format=mpegts" : (mp4avcaac ? "format=mp4" : "format=mpeg2:muxrate=500000:vbuf_size=1194:abuf_size=64")),
+			"-ovc", (mux || ovccopy) ? "copy" : (mp4avcaac ? "x264": "lavc")
 		};
 	}
 
@@ -1219,6 +1219,12 @@ public class MEncoderVideo extends Player {
 
 		String vcodec = "mpeg2video";
 
+		mp4avcaac = false;
+		if (params.mediaRenderer.isTranscodeToMP4AVCAAC()) {
+			mp4avcaac = true;
+			vcodec = "libx264";
+		}
+
 		wmv = false;
 		if (params.mediaRenderer.isTranscodeToWMV()) {
 			wmv = true;
@@ -1268,9 +1274,9 @@ public class MEncoderVideo extends Player {
 		if (dvd) {
 			alternativeCodec = "";
 		}
-		int channels = wmv ? 2 : configuration.getAudioChannelCount();
+		int channels = (wmv || mp4avcaac) ? 2 : configuration.getAudioChannelCount();
 		if (media != null && params.aid != null) {
-			channels = wmv ? 2 : CodecUtil.getRealChannelCount(configuration, params.aid);
+			channels = (wmv || mp4avcaac) ? 2 : CodecUtil.getRealChannelCount(configuration, params.aid);
 		}
 		logger.trace("channels=" + channels);
 
@@ -1315,10 +1321,10 @@ public class MEncoderVideo extends Player {
 			int cbr_bitrate = params.mediaRenderer.getCBRVideoBitrate();
 			String cbr_settings = (cbr_bitrate > 0) ? ":vrc_buf_size=1835:vrc_minrate=" + cbr_bitrate + ":vrc_maxrate=" + cbr_bitrate + ":vbitrate=" + cbr_bitrate : "";
 			String encodeSettings = "-lavcopts autoaspect=1:vcodec=" + vcodec +
-				(wmv ? ":acodec=wmav2:abitrate=448" : (cbr_settings + ":acodec=" + (configuration.isMencoderAc3Fixed() ? "ac3_fixed" : "ac3") +
-				":abitrate=" + CodecUtil.getAC3Bitrate(configuration, params.aid))) +
+				(wmv ? ":acodec=wmav2:abitrate=448" : (mp4avcaac ? ":acodec=aac:abitrate=224" : (cbr_settings + ":acodec=" + (configuration.isMencoderAc3Fixed() ? "ac3_fixed" : "ac3") +
+				":abitrate=" + CodecUtil.getAC3Bitrate(configuration, params.aid)))) +
 				":threads=" + (wmv ? 1 : configuration.getMencoderMaxThreads()) +
-				("".equals(mainConfig) ? "" : ":" + mainConfig);
+				("".equals(mainConfig) ? "" : (mp4avcaac ? " -x264encopts "+mainConfig : ":" + mainConfig));
 
 			String audioType = "ac3";
 			if (dts) {
