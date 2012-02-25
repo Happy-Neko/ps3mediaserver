@@ -56,6 +56,7 @@ public class RendererConfigurationTest {
 		// From AirPlayer.conf:
 		testCases.put("User-Agent: AirPlayer/1.0.09 CFNetwork/485.13.9 Darwin/11.0.0", "AirPlayer");
 		testCases.put("User-Agent: Lavf52.54.0", "AirPlayer");
+		testCases.put("User-Agent: AirAV/1.00 CFNetwork/548.0.4 Darwin/11.0.0", "AirPlayer");
 
 		// From BraviaEX.conf:
 		testCases.put("X-AV-Client-Info: av=5.0; cn=\"Sony Corporation\"; mn=\"BRAVIA KDL-32CX520\"; mv=\"1.7\";", "Sony Bravia EX");
@@ -80,7 +81,7 @@ public class RendererConfigurationTest {
 		// FIXME: Actual conflict here! Popcorn Hour is returned...
 		//testCases.put("User-Agent: POSIX UPnP/1.0 Intel MicroStack/1.0.2718, RealtekMediaCenter, DLNADOC/1.50", "Realtek");
 		testCases.put("User-Agent: RealtekVOD neon/0.27.2", "Realtek");
-		
+
 		// From SamsungAllShare.conf:
 		testCases.put("User-Agent: SEC_HHP_[HT]D5500/1.0", "Samsung AllShare");
 		testCases.put("User-Agent: SEC_HHP_[TV]UE32D5000/1.0", "Samsung AllShare");
