@@ -31,7 +31,9 @@ import java.util.Locale;
 import java.util.Set;
 
 import net.pms.io.SystemUtils;
+import net.pms.Messages;
 
+import net.pms.util.PropertiesUtil;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.ConversionException;
@@ -107,7 +109,7 @@ public class PmsConfiguration {
 	private static final String KEY_MENCODER_ASS_SHADOW = "mencoder_ass_shadow";
 	private static final String KEY_MENCODER_AUDIO_LANGS = "mencoder_audiolangs";
 	private static final String KEY_MENCODER_AUDIO_SUB_LANGS = "mencoder_audiosublangs";
-	private static final String KEY_MENCODER_DECODE = "mencoder_decode";
+	private static final String KEY_MENCODER_CUSTOM_OPTIONS = "mencoder_decode"; // TODO (breaking change): should be renamed to e.g. mencoder_custom_options
 	private static final String KEY_MENCODER_DISABLE_SUBS = "mencoder_disablesubs";
 	private static final String KEY_MENCODER_FONT_CONFIG = "mencoder_fontconfig";
 	private static final String KEY_MENCODER_FONT = "mencoder_font";
@@ -135,6 +137,7 @@ public class PmsConfiguration {
 	private static final String KEY_MENCODER_SUB_FRIBIDI = "mencoder_subfribidi";
 	private static final String KEY_MENCODER_SUB_LANGS = "mencoder_sublangs";
 	private static final String KEY_MENCODER_USE_PCM = "mencoder_usepcm";
+	private static final String KEY_MENCODER_USE_PCM_FOR_HQ_AUDIO_ONLY = "mencoder_usepcm_for_hq_audio_only";
 	private static final String KEY_MENCODER_VOBSUB_SUBTITLE_QUALITY = "mencoder_vobsub_subtitle_quality";
 	private static final String KEY_MENCODER_YADIF = "mencoder_yadif";
 	private static final String KEY_MINIMIZED = "minimized";
@@ -150,6 +153,8 @@ public class PmsConfiguration {
 	private static final String KEY_PREVENTS_SLEEP = "prevents_sleep_mode";
 	private static final String KEY_PROFILE_NAME = "name";
 	private static final String KEY_PROXY_SERVER_PORT = "proxy";
+	private static final String KEY_RENDERER_DEFAULT = "renderer_default";
+	private static final String KEY_RENDERER_FORCE_DEFAULT = "renderer_force_default";
 	private static final String KEY_SERVER_HOSTNAME = "hostname";
 	private static final String KEY_SERVER_PORT = "port";
 	private static final String KEY_SHARES = "shares";
@@ -158,7 +163,7 @@ public class PmsConfiguration {
 	private static final String KEY_SORT_METHOD = "key_sort_method";
 	private static final String KEY_SUBS_COLOR = "subs_color";
 	private static final String KEY_TEMP_FOLDER_PATH = "temp";
-	private static final String KEY_THUMBNAIL_GENERATION_ENABLED = "thumbnails"; // TODO should be renamed e.g. "generate_thumbnails" at some stage
+	private static final String KEY_THUMBNAIL_GENERATION_ENABLED = "thumbnails"; // TODO (breaking change): should be renamed to e.g. generate_thumbnails
 	private static final String KEY_THUMBNAIL_SEEK_POS = "thumbnail_seek_pos";
 	private static final String KEY_TRANSCODE_BLOCKS_MULTIPLE_CONNECTIONS = "transcode_block_multiple_connections";
 	private static final String KEY_TRANSCODE_KEEP_FIRST_CONNECTION = "transcode_keep_first_connection";
@@ -180,16 +185,7 @@ public class PmsConfiguration {
 	// the default profile name displayed on the renderer
 	private static String HOSTNAME;
 
-	private static final String DEFAULT_AVI_SYNTH_SCRIPT =
-		"#AviSynth script is now fully customisable !\n"
-		+ "#You must use the following variables (\"clip\" being the avisynth variable of the movie):\n"
-		+ "#<movie>: insert the complete DirectShowSource instruction [ clip=DirectShowSource(movie, convertfps) ]\n"
-		+ "#<sub>: insert the complete TextSub/VobSub instruction if there's any detected srt/sub/idx/ass subtitle file\n"
-		+ "#<moviefilename>: variable of the movie filename, if you want to do all this by yourself\n"
-		+ "#Be careful, the custom script MUST return the clip object\n"
-		+ "<movie>\n"
-		+ "<sub>\n"
-		+ "return clip";
+	private static String DEFAULT_AVI_SYNTH_SCRIPT;
 	private static final String BUFFER_TYPE_FILE = "file";
 	private static final int MAX_MAX_MEMORY_BUFFER_SIZE = 400;
 	private static final char LIST_SEPARATOR = ',';
@@ -279,10 +275,12 @@ public class PmsConfiguration {
 	private static final String ENV_PROFILE_PATH = "PMS_PROFILE";
 	private static final String PROFILE_DIRECTORY; // path to directory containing PMS config files
 	private static final String PROFILE_PATH; // abs path to profile file e.g. /path/to/PMS.conf
+    private static final String SKEL_PROFILE_PATH ; // abs path to skel (default) profile file e.g. /etc/skel/.config/ps3mediaserver/PMS.conf
+                                                    // "project.skelprofile.dir" project property
 	private static final String PROPERTY_PROFILE_PATH = "pms.profile.path";
 
 	static {
-		// first try the system property, typically set via the profile chooser
+        // first try the system property, typically set via the profile chooser
 		String profile = System.getProperty(PROPERTY_PROFILE_PATH);
 
 		// failing that, try the environment variable
@@ -340,22 +338,70 @@ public class PmsConfiguration {
 
 			PROFILE_PATH = FilenameUtils.normalize(new File(PROFILE_DIRECTORY, DEFAULT_PROFILE_FILENAME).getAbsolutePath());
 		}
+        // set SKEL_PROFILE_PATH for Linux systems
+        String skelDir = PropertiesUtil.getProjectProperties().get("project.skelprofile.dir");
+        if (Platform.isLinux() && StringUtils.isNotBlank(skelDir)) {
+            SKEL_PROFILE_PATH = FilenameUtils.normalize(new File(new File(skelDir, PROFILE_DIRECTORY_NAME).getAbsolutePath(), DEFAULT_PROFILE_FILENAME).getAbsolutePath());
+        } else {
+            SKEL_PROFILE_PATH = null;
+        }
 	}
 
+	/**
+	 * Default constructor that will attempt to load the PMS configuration file
+	 * from the profile path.
+	 *
+	 * @throws ConfigurationException
+	 * @throws IOException
+	 */
 	public PmsConfiguration() throws ConfigurationException, IOException {
+		this(true);
+	}
+
+	/**
+	 * Constructor that will initialize the PMS configuration.
+	 *
+	 * @param loadFile Set to true to attempt to load the PMS configuration
+	 * 					file from the profile path. Set to false to skip
+	 * 					loading.
+	 * @throws ConfigurationException
+	 * @throws IOException
+	 */
+	public PmsConfiguration(boolean loadFile) throws ConfigurationException, IOException {
 		configuration = new PropertiesConfiguration();
 		configuration.setListDelimiter((char) 0);
-		configuration.setFileName(PROFILE_PATH);
 
-		File pmsConfFile = new File(PROFILE_PATH);
-
-		if (pmsConfFile.exists() && pmsConfFile.isFile()) {
-			configuration.load(PROFILE_PATH);
+		if (loadFile) {
+			File pmsConfFile = new File(PROFILE_PATH);
+	
+			if (pmsConfFile.isFile() && pmsConfFile.canRead()) {
+				configuration.load(PROFILE_PATH);
+			} else if (SKEL_PROFILE_PATH != null) {
+                File pmsSkelConfFile = new File(SKEL_PROFILE_PATH);
+                if (pmsSkelConfFile.isFile() && pmsSkelConfFile.canRead()) {
+                    // load defaults from skel file, save them later to PROFILE_PATH
+                    configuration.load(pmsSkelConfFile);
+                    logger.info("Default configuration loaded from " + SKEL_PROFILE_PATH);
+                }
+            }
 		}
 
-		tempFolder = new TempFolder(getString(KEY_TEMP_FOLDER_PATH, null));
+        configuration.setPath(PROFILE_PATH);
+
+        tempFolder = new TempFolder(getString(KEY_TEMP_FOLDER_PATH, null));
 		programPaths = createProgramPathsChain(configuration);
 		Locale.setDefault(new Locale(getLanguage()));
+		// set DEFAULT_AVI_SYNTH_SCRIPT properly according to language
+		DEFAULT_AVI_SYNTH_SCRIPT = 
+				  Messages.getString("MEncoderAviSynth.4")
+				+ Messages.getString("MEncoderAviSynth.5")
+				+ Messages.getString("MEncoderAviSynth.6")
+				+ Messages.getString("MEncoderAviSynth.7")
+				+ Messages.getString("MEncoderAviSynth.8")
+				+ Messages.getString("MEncoderAviSynth.9")
+				+ Messages.getString("MEncoderAviSynth.10")
+				+ Messages.getString("MEncoderAviSynth.11")
+				+ Messages.getString("MEncoderAviSynth.12");
 	}
 
 	/**
@@ -621,7 +667,9 @@ public class PmsConfiguration {
 
 	/**
 	 * Returns the preferred maximum size for the transcoding memory buffer in megabytes.
-	 * The value returned has a top limit of 600. Default value is 400.
+	 * The value returned has a top limit of {@link #MAX_MAX_MEMORY_BUFFER_SIZE}. Default
+	 * value is 400.
+	 *
 	 * @return The maximum memory buffer size.
 	 */
 	public int getMaxMemoryBufferSize() {
@@ -638,7 +686,8 @@ public class PmsConfiguration {
 
 	/**
 	 * Set the preferred maximum for the transcoding memory buffer in megabytes. The top
-	 * limit for the value is 600.
+	 * limit for the value is {@link #MAX_MAX_MEMORY_BUFFER_SIZE}.
+	 *
 	 * @param value The maximum buffer size.
 	 */
 	public void setMaxMemoryBufferSize(int value) {
@@ -867,6 +916,15 @@ public class PmsConfiguration {
 	}
 
 	/**
+	 * Returns whether or not the Pulse Code Modulation audio format should be
+	 * used only for HQ audio codecs. The default is false.
+	 * @return True if PCM should be used only for HQ audio codecs, false otherwise.
+	 */
+	public boolean isMencoderUsePcmForHQAudioOnly() {
+		return getBoolean(KEY_MENCODER_USE_PCM_FOR_HQ_AUDIO_ONLY, false);
+	}
+
+	/**
 	 * Returns the name of a TrueType font to use for MEncoder subtitles.
 	 * Default is <code>""</code>.
 	 * @return The font name.
@@ -1039,19 +1097,41 @@ public class PmsConfiguration {
 	}
 
 	/**
+	 * @deprecated Use {@link #getMencoderCustomOptions()} instead.
+	 * <p>
 	 * Returns custom commandline options to pass on to MEncoder.
 	 * @return The custom options string.
 	 */
+	@Deprecated
 	public String getMencoderDecode() {
-		return getString(KEY_MENCODER_DECODE, "");
+		return getMencoderCustomOptions();
+	}
+
+	/**
+	 * Returns custom commandline options to pass on to MEncoder.
+	 * @return The custom options string.
+	 */
+	public String getMencoderCustomOptions() {
+		return getString(KEY_MENCODER_CUSTOM_OPTIONS, "");
+	}
+
+	/**
+	 * @deprecated Use {@link #setMencoderCustomOptions(String)} instead.
+	 * <p>
+	 * Sets custom commandline options to pass on to MEncoder.
+	 * @param value The custom options string.
+	 */
+	@Deprecated
+	public void setMencoderDecode(String value) {
+		setMencoderCustomOptions(value);
 	}
 
 	/**
 	 * Sets custom commandline options to pass on to MEncoder.
 	 * @param value The custom options string.
 	 */
-	public void setMencoderDecode(String value) {
-		configuration.setProperty(KEY_MENCODER_DECODE, value);
+	public void setMencoderCustomOptions(String value) {
+		configuration.setProperty(KEY_MENCODER_CUSTOM_OPTIONS, value);
 	}
 
 	/**
@@ -1117,6 +1197,15 @@ public class PmsConfiguration {
 	 */
 	public void setMencoderUsePcm(boolean value) {
 		configuration.setProperty(KEY_MENCODER_USE_PCM, value);
+	}
+
+	/**
+	 * Sets whether or not the Pulse Code Modulation audio format should be
+	 * used only for HQ audio codecs.
+	 * @param value Set to true if PCM should be used only for HQ audio.
+	 */
+	public void setMencoderUsePcmForHQAudioOnly(boolean value) {
+		configuration.setProperty(KEY_MENCODER_USE_PCM_FOR_HQ_AUDIO_ONLY, value);
 	}
 
 	/**
@@ -1293,7 +1382,7 @@ public class PmsConfiguration {
 	}
 
 	/**
-	 * @deprecated Use {@link #setThumbnailGenerationEnabled()} instead.
+	 * @deprecated Use {@link #setThumbnailGenerationEnabled(boolean)} instead.
 	 * <p>
 	 * Sets the thumbnail generation option.
 	 * This only determines whether a thumbnailer (e.g. dcraw, MPlayer)
@@ -1463,34 +1552,79 @@ public class PmsConfiguration {
 		configuration.setProperty(KEY_USE_CACHE, value);
 	}
 
+	/**
+	 * Set to true if PMS should pass the flag "convertfps=true" to AviSynth.
+	 *
+	 * @param value True if PMS should pass the flag.
+	 */
 	public void setAvisynthConvertFps(boolean value) {
 		configuration.setProperty(KEY_AVISYNTH_CONVERT_FPS, value);
 	}
 
+	/**
+	 * Returns true if PMS should pass the flag "convertfps=true" to AviSynth.
+	 *
+	 * @return True if PMS should pass the flag.
+	 */
 	public boolean getAvisynthConvertFps() {
 		return getBoolean(KEY_AVISYNTH_CONVERT_FPS, true);
 	}
 
+	/**
+	 * Returns the template for the AviSynth script. The script string can
+	 * contain the character "\u0001", which should be treated as the newline
+	 * separator character.
+	 *
+	 * @return The AviSynth script template.
+	 */
 	public String getAvisynthScript() {
 		return getString(KEY_AVISYNTH_SCRIPT, DEFAULT_AVI_SYNTH_SCRIPT);
 	}
 
+	/**
+	 * Sets the template for the AviSynth script. The script string may contain
+	 * the character "\u0001", which will be treated as newline character.
+	 *
+	 * @param value The AviSynth script template.
+	 */
 	public void setAvisynthScript(String value) {
 		configuration.setProperty(KEY_AVISYNTH_SCRIPT, value);
 	}
 
+	/**
+	 * Returns additional codec specific configuration options for MEncoder.
+	 *
+	 * @return The configuration options.
+	 */
 	public String getCodecSpecificConfig() {
 		return getString(KEY_CODEC_SPEC_SCRIPT, "");
 	}
 
+	/**
+	 * Sets additional codec specific configuration options for MEncoder.
+	 *
+	 * @param value The additional configuration options.
+	 */
 	public void setCodecSpecificConfig(String value) {
 		configuration.setProperty(KEY_CODEC_SPEC_SCRIPT, value);
 	}
 
+	/**
+	 * Returns the maximum size (in MB) that PMS should use for buffering
+	 * audio.
+	 *
+	 * @return The maximum buffer size.
+	 */
 	public int getMaxAudioBuffer() {
 		return getInt(KEY_MAX_AUDIO_BUFFER, 100);
 	}
 
+	/**
+	 * Returns the minimum size (in MB) that PMS should use for the buffer used
+	 * for streaming media.
+	 *
+	 * @return The minimum buffer size.
+	 */
 	public int getMinStreamBuffer() {
 		return getInt(KEY_MIN_STREAM_BUFFER, 1);
 	}
@@ -1993,6 +2127,61 @@ public class PmsConfiguration {
 
 	public void setAudioResample(boolean value) {
 		configuration.setProperty(KEY_AUDIO_RESAMPLE, value);
+	}
+
+	/**
+	 * Returns the name of the renderer to fall back on when header matching
+	 * fails. PMS will recognize the configured renderer instead of "Unknown
+	 * renderer". Default value is "", which means PMS will return the unknown
+	 * renderer when no match can be made.
+	 *
+	 * @return The name of the renderer PMS should fall back on when header
+	 * 			matching fails.
+	 * @see #isRendererForceDefault()
+	 */
+	public String getRendererDefault() {
+		return getString(KEY_RENDERER_DEFAULT, "");
+	}
+
+	/**
+	 * Sets the name of the renderer to fall back on when header matching
+	 * fails. PMS will recognize the configured renderer instead of "Unknown
+	 * renderer". Set to "" to make PMS return the unknown renderer when no
+	 * match can be made.
+	 *
+	 * @param value The name of the renderer to fall back on. This has to be
+	 * 				<code>""</code> or a case insensitive match with the name
+	 * 				used in any render configuration file.
+	 * @see #setRendererForceDefault(boolean)
+	 */
+	public void setRendererDefault(String value) {
+		configuration.setProperty(KEY_RENDERER_DEFAULT, value);
+	}
+
+	/**
+	 * Returns true when PMS should not try to guess connecting renderers
+	 * and instead force picking the defined fallback renderer. Default
+	 * value is false, which means PMS will attempt to recognize connecting
+	 * renderers by their headers.
+	 *
+	 * @return True when the fallback renderer should always be picked.
+	 * @see #getRendererDefault()
+	 */
+	public boolean isRendererForceDefault() {
+		return getBoolean(KEY_RENDERER_FORCE_DEFAULT, false);
+	}
+
+	/**
+	 * Set to true when PMS should not try to guess connecting renderers
+	 * and instead force picking the defined fallback renderer. Set to false
+	 * to make PMS attempt to recognize connecting renderers by their headers.
+	 *
+	 * @param value Set to true when the fallback renderer should always be
+	 *				picked.
+	 * @see #setRendererDefault(String)
+	 */
+	public void setRendererForceDefault(boolean value) {
+		configuration.setProperty(KEY_RENDERER_FORCE_DEFAULT, value);
 	}
 
 	public String getVirtualFolders() {

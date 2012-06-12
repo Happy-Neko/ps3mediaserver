@@ -31,7 +31,7 @@
 	<artifactId>pms</artifactId>
 	<name>PS3 Media Server</name>
 	<packaging>jar</packaging>
-	<version>1.51.1-SNAPSHOT</version>
+	<version>1.53.1-SNAPSHOT</version>
 	<url>http://www.ps3mediaserver.org/</url>
 	<inceptionYear>2008</inceptionYear>
 
@@ -70,6 +70,14 @@
 	<properties>
 		<!-- NSIS needs a version without "-SNAPSHOT" or "-b1" -->
 		<project.version.short>1.51.0</project.version.short>
+
+		<!--
+			JNA 3.4.0 solves issue #1152, but causes a bug in Windows.
+			The version is therefore overruled in the Windows profile.
+			This property should be removed when Windows can use the
+			same version.
+		-->
+		<jna-version>3.4.0</jna-version>
 
 		<cuelib-version>1.2.1-2008-06-13</cuelib-version>
 		<jgoodies-common-version>1.2.1</jgoodies-common-version>
@@ -273,12 +281,6 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.jvnet.winp</groupId>
-			<artifactId>winp</artifactId>
-			<version>1.14</version>
-		</dependency>
-
-		<dependency>
 			<groupId>org</groupId>
 			<artifactId>jaudiotagger</artifactId>
 			<version>2.0.3</version>
@@ -287,7 +289,7 @@
 		<dependency>
 			<groupId>net.java.dev.jna</groupId>
 			<artifactId>jna</artifactId>
-			<version>3.2.5</version>
+			<version>${jna-version}</version>
 		</dependency>
 
 		<!-- XXX: not Mavenized: http://www.jgoodies.com/downloads/libraries.html -->
@@ -425,9 +427,21 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
+					<configuration>
+						<!--
+						    1) Force language because JUnit tests depend on English language strings
+
+							2) Use our JNA dependency rather than the system's - fixes
+							the following error on Linux (Ubuntu 12.04 with system
+							jna-3.2.7.jar via libjna-java):
+
+								There is an incompatible JNA native library installed on this system.
+						-->
+						<argLine>-Duser.language=en -Djna.nosys=true</argLine> <!-- only one argLine element is processed -->
+					</configuration>
 					<version>2.11</version>
 				</plugin>
-				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+				<!-- This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself. -->
 				<plugin>
 					<groupId>org.eclipse.m2e</groupId>
 					<artifactId>lifecycle-mapping</artifactId>
@@ -854,7 +868,17 @@
 
 					</reportPlugins>
 				</configuration>
-			</plugin> 
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.1.2</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>2.8.1</version>
+			</plugin>
 		</plugins>
 	</build>
 
@@ -871,7 +895,14 @@
 					<family>windows</family>
 				</os>
 			</activation>
-			
+
+			<properties>
+				<!--
+					Last known JNA version known not to cause a Java crash
+					when browsing folders with files in them on Windows.
+				-->
+				<jna-version>3.2.5</jna-version>
+			</properties>			
 
 			<pluginRepositories>
 				<pluginRepository>

@@ -333,7 +333,7 @@ public class PMS {
 		frame.setStatusCode(0, Messages.getString("PMS.130"), "connect_no-220.png");
 		proxy = -1;
 
-		logger.info("Starting PS3 Media Server " + getVersion());
+		logger.info("Starting " + PropertiesUtil.getProjectProperties().get("project.name") + " " + getVersion());
 		logger.info("by shagrath / 2008-2012");
 		logger.info("http://ps3mediaserver.org");
 		logger.info("https://github.com/ps3mediaserver/ps3mediaserver");
@@ -393,7 +393,7 @@ public class PMS {
 		logger.info("Profile name: " + configuration.getProfileName());
 		logger.info("");
 
-		RendererConfiguration.loadRendererConfigurations();
+		RendererConfiguration.loadRendererConfigurations(configuration);
 
 		logger.info("Checking MPlayer font cache. It can take a minute or so.");
 		checkProcessExistence("MPlayer", true, null, configuration.getMplayerPath(), "dummy");
@@ -555,6 +555,7 @@ public class PMS {
 		return mediaLibrary;
 	}
 
+	// FIXME this is duplicated in net/pms/encoders/PlayerFactory.java
 	private SystemUtils createSystemUtils() {
 		if (Platform.isWindows()) {
 			return new WinUtils();
