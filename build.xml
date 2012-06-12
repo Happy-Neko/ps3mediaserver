@@ -49,7 +49,7 @@
       <include name="net/java/dev/rome/rome/1.0.0/rome-1.0.0.jar"/>
       <include name="jdom/jdom/1.0/jdom-1.0.jar"/>
       <include name="org/jaudiotagger/2.0.3/jaudiotagger-2.0.3.jar"/>
-      <include name="net/java/dev/jna/jna/3.2.5/jna-3.2.5.jar"/>
+      <include name="net/java/dev/jna/jna/${jna-version}/jna-${jna-version}.jar"/>
       <include name="com/jgoodies/common/${jgoodies-common-version}/jgoodies-common-${jgoodies-common-version}.jar"/>
       <include name="com/jgoodies/forms/${jgoodies-forms-version}/jgoodies-forms-${jgoodies-forms-version}.jar"/>
       <include name="com/jgoodies/looks/${jgoodies-looks-version}/jgoodies-looks-${jgoodies-looks-version}.jar"/>
