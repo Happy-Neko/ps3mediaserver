@@ -123,7 +123,7 @@
   <!-- Build pms.jar with dependencies                                        -->
   <!-- ====================================================================== -->
 
-  <target name="jar" depends="compile,test" description="Builds pms.jar with dependencies">
+  <target name="jar" depends="compile" description="Builds pms.jar with dependencies">
     <jar jarfile="${maven.build.dir}/pms.jar"
          compress="off"
          basedir="${maven.build.outputDir}">
