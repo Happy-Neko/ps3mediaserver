@@ -83,7 +83,7 @@
 		<jgoodies-common-version>1.2.1</jgoodies-common-version>
 		<jgoodies-forms-version>1.4.2</jgoodies-forms-version>
 		<jgoodies-looks-version>2.4.2</jgoodies-looks-version>
-		<junrar-version>0.6.1</junrar-version>
+		<junrar-version>0.7</junrar-version>
 		<mediautil-version>1.0</mediautil-version>
 		<slf4j-version>1.6.4</slf4j-version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -326,9 +326,9 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.github.junrar</groupId>
-			<artifactId>junrar</artifactId>
-			<version>${junrar-version}</version>
+            <groupId>com.github.junrar</groupId>
+            <artifactId>junrar</artifactId>
+            <version>${junrar-version}</version>
 		</dependency>
 
 		<!-- XXX: not Mavenized: https://code.google.com/p/cuelib/ -->
