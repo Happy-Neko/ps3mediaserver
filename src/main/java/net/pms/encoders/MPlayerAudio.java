@@ -18,21 +18,10 @@
  */
 package net.pms.encoders;
 
-import java.awt.Font;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.io.IOException;
-import java.util.Arrays;
-
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-
 import com.jgoodies.forms.builder.PanelBuilder;
 import com.jgoodies.forms.factories.Borders;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
-
-
 import net.pms.Messages;
 import net.pms.PMS;
 import net.pms.configuration.PmsConfiguration;
@@ -44,6 +33,13 @@ import net.pms.io.PipeProcess;
 import net.pms.io.ProcessWrapper;
 import net.pms.io.ProcessWrapperImpl;
 import net.pms.network.HTTPResource;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.io.IOException;
+import java.util.Arrays;
 
 public class MPlayerAudio extends Player {
 	public static final String ID = "mplayeraudio";
@@ -189,5 +185,30 @@ public class MPlayerAudio extends Player {
 		builder.add(noresample, cc.xy(2, 3));
 
 		return builder.getPanel();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean isCompatible(DLNAResource resource) {
+		if (resource == null || resource.getFormat().getType() != Format.AUDIO) {
+			return false;
+		}
+
+		Format format = resource.getFormat();
+
+		if (format != null) {
+			Format.Identifier id = format.getIdentifier();
+
+			if (id.equals(Format.Identifier.FLAC)
+					|| id.equals(Format.Identifier.M4A)
+					|| id.equals(Format.Identifier.OGG)
+					|| id.equals(Format.Identifier.WAV)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

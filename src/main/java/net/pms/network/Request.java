@@ -18,16 +18,6 @@
  */
 package net.pms.network;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
-
 import net.pms.PMS;
 import net.pms.configuration.RendererConfiguration;
 import net.pms.dlna.DLNAMediaInfo;
@@ -35,14 +25,25 @@ import net.pms.dlna.DLNAMediaSubtitle;
 import net.pms.dlna.DLNAResource;
 import net.pms.dlna.Range;
 import net.pms.external.StartStopListenerDelegate;
-
 import org.apache.commons.lang.StringUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.MalformedURLException;
+import java.net.Socket;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import static org.apache.commons.lang.StringUtils.isNotBlank;
+
 public class Request extends HTTPResource {
-	private static final Logger logger = LoggerFactory.getLogger(Request.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(Request.class);
+
 	private final static String CRLF = "\r\n";
 	private final static String HTTP_200_OK = "HTTP/1.1 200 OK";
 	private final static String HTTP_500 = "HTTP/1.1 500 Internal Server Error";
@@ -185,10 +186,10 @@ public class Request extends HTTPResource {
 
 		// Samsung 2012 TVs have a problematic preceding slash that needs to be removed.
 		if (argument.startsWith("/")) {
-			logger.trace("Stripping preceding slash from: " + argument);
+			LOGGER.trace("Stripping preceding slash from: " + argument);
 			argument = argument.substring(1);
 		}
-		
+
 		if ((method.equals("GET") || method.equals("HEAD")) && argument.startsWith("console/")) {
 			output(output, "Content-Type: text/html");
 			response.append(HTMLConsole.servePage(argument.substring(8)));
@@ -218,12 +219,12 @@ public class Request extends HTTPResource {
 					// This is a request for a subtitle file
 					output(output, "Content-Type: text/plain");
 					output(output, "Expires: " + getFUTUREDATE() + " GMT");
-					List<DLNAMediaSubtitle> subs = dlna.getMedia().getSubtitlesCodes();
+					List<DLNAMediaSubtitle> subs = dlna.getMedia().getSubtitleTracksList();
 
 					if (subs != null && !subs.isEmpty()) {
 						// TODO: maybe loop subs to get the requested subtitle type instead of using the first one
 						DLNAMediaSubtitle sub = subs.get(0);
-						inputStream = new java.io.FileInputStream(sub.getFile());
+						inputStream = new java.io.FileInputStream(sub.getExternalFile());
 					}
 				} else {
 					// This is a request for a regular file.
@@ -231,7 +232,7 @@ public class Request extends HTTPResource {
 					inputStream = dlna.getInputStream(Range.create(lowRange, highRange, timeseek, timeRangeEnd), mediaRenderer);
 					if (inputStream == null) {
 						// No inputStream indicates that transcoding / remuxing probably crashed.
-						logger.error("There is no inputstream to return for " + name);
+						LOGGER.error("There is no inputstream to return for " + name);
 					} else {
 						startStopListenerDelegate.start(dlna);
 						output(output, "Content-Type: " + getRendererMimeType(dlna.mimeType(), mediaRenderer));
@@ -241,20 +242,22 @@ public class Request extends HTTPResource {
 
 						if (subtitleHttpHeader != null && !"".equals(subtitleHttpHeader)) {
 							// Device allows a custom subtitle HTTP header; construct it
-							List<DLNAMediaSubtitle> subs = dlna.getMedia().getSubtitlesCodes();
+							List<DLNAMediaSubtitle> subs = dlna.getMedia().getSubtitleTracksList();
 
 							if (subs != null && !subs.isEmpty()) {
 								DLNAMediaSubtitle sub = subs.get(0);
-
-								int type = sub.getType();
-
-								if (type < DLNAMediaSubtitle.subExtensions.length) {
-									String strType = DLNAMediaSubtitle.subExtensions[type - 1];
-									String subtitleUrl = "http://" + PMS.get().getServer().getHost()
-									+ ':' + PMS.get().getServer().getPort() + "/get/" 
-									+ id + "/subtitle0000." + strType;
-									output(output, subtitleHttpHeader + ": " + subtitleUrl);
+								String subtitleUrl;
+								String subExtension = sub.getType().getExtension();
+								if (isNotBlank(subExtension)) {
+									subtitleUrl = "http://" + PMS.get().getServer().getHost()
+											+ ':' + PMS.get().getServer().getPort() + "/get/"
+											+ id + "/subtitle0000." + subExtension;
+								} else {
+									subtitleUrl = "http://" + PMS.get().getServer().getHost()
+											+ ':' + PMS.get().getServer().getPort() + "/get/"
+											+ id + "/subtitle0000";
 								}
+								output(output, subtitleHttpHeader + ": " + subtitleUrl);
 							}
 						}
 
@@ -292,7 +295,7 @@ public class Request extends HTTPResource {
 						if (requested != 0) {
 							// Determine the range (i.e. smaller of known or requested bytes)
 							long bytes = remaining > -1 ? remaining : inputStream.available();
-							
+
 							if (requested > 0 && bytes > requested) {
 								bytes = requested + 1;
 							}
@@ -300,7 +303,7 @@ public class Request extends HTTPResource {
 							// Calculate the corresponding highRange (this is usually redundant).
 							highRange = lowRange + bytes - (bytes > 0 ? 1 : 0);
 
-							logger.trace((chunked ? "Using chunked response. " : "") + "Sending " + bytes + " bytes.");
+							LOGGER.trace((chunked ? "Using chunked response. " : "") + "Sending " + bytes + " bytes.");
 
 							output(output, "Content-Range: bytes " + lowRange
 									+ "-" + (highRange > -1 ? highRange : "*")
@@ -357,15 +360,15 @@ public class Request extends HTTPResource {
 				s = s.replace("[host]", PMS.get().getServer().getHost());
 				s = s.replace("[port]", "" + PMS.get().getServer().getPort());
 				if (xbox) {
-					logger.debug("DLNA changes for Xbox360");
+					LOGGER.debug("DLNA changes for Xbox 360");
 					s = s.replace("PS3 Media Server", "PS3 Media Server [" + profileName + "] : Windows Media Connect");
 					s = s.replace("<modelName>PMS</modelName>", "<modelName>Windows Media Connect</modelName>");
 					s = s.replace("<serviceList>", "<serviceList>" + CRLF + "<service>" + CRLF
-						+ "<serviceType>urn:microsoft.com:service:X_MS_MediaReceiverRegistrar:1</serviceType>" + CRLF
-						+ "<serviceId>urn:microsoft.com:serviceId:X_MS_MediaReceiverRegistrar</serviceId>" + CRLF
-						+ "<SCPDURL>/upnp/mrr/scpd</SCPDURL>" + CRLF
-						+ "<controlURL>/upnp/mrr/control</controlURL>" + CRLF
-						+ "</service>" + CRLF);
+							+ "<serviceType>urn:microsoft.com:service:X_MS_MediaReceiverRegistrar:1</serviceType>" + CRLF
+							+ "<serviceId>urn:microsoft.com:serviceId:X_MS_MediaReceiverRegistrar</serviceId>" + CRLF
+							+ "<SCPDURL>/upnp/mrr/scpd</SCPDURL>" + CRLF
+							+ "<controlURL>/upnp/mrr/control</controlURL>" + CRLF
+							+ "</service>" + CRLF);
 
 
 				} else {
@@ -399,6 +402,53 @@ public class Request extends HTTPResource {
 				response.append(CRLF);
 				response.append(HTTPXMLHelper.SOAP_ENCODING_FOOTER);
 				response.append(CRLF);
+			}
+		} else if (method.equals("SUBSCRIBE")) {
+			if(soapaction==null) //ignore this
+				return;
+			output(output, CONTENT_TYPE_UTF8);
+			output(output,"Content-Length: 0");
+			output(output,"Connection: close");
+			output(output,"SID: "+PMS.get().usn());
+			output(output,"Server: "+PMS.get().getServerName());
+			output(output,"Timeout: Second-1800");
+			output(output,"");
+			output.flush();
+			//output.close();
+
+			String cb = soapaction.replace("<", "").replace(">", "");
+
+			try {
+				URL soapActionUrl = new URL(cb);
+				String addr = soapActionUrl.getHost();
+				int port = soapActionUrl.getPort();
+				Socket sock = new Socket(addr,port);
+				OutputStream out = sock.getOutputStream();
+
+				output(out,"NOTIFY /"+argument+" HTTP/1.1");
+				output(out,"SID: "+PMS.get().usn());
+				output(out,"SEQ: "+0);
+				output(out,"NT: upnp:event");
+				output(out,"NTS: upnp:propchange");
+				output(out,"HOST: " + addr + ":" + port);
+				output(out, CONTENT_TYPE_UTF8);
+			} catch (MalformedURLException ex) {
+				LOGGER.debug("Cannot parse address and port from soap action \"" + soapaction + "\"", ex);
+			}
+			
+			if(argument.contains("connection_manager")) {
+				response.append(HTTPXMLHelper.eventHeader("urn:schemas-upnp-org:service:ConnectionManager:1"));
+				response.append(HTTPXMLHelper.eventProp("SinkProtocolInfo"));
+				response.append(HTTPXMLHelper.eventProp("SourceProtocolInfo"));
+				response.append(HTTPXMLHelper.eventProp("CurrentConnectionIDs"));
+				response.append(HTTPXMLHelper.EVENT_FOOTER);
+			}
+			else if(argument.contains("content_directory")) {
+				response.append(HTTPXMLHelper.eventHeader("urn:schemas-upnp-org:service:ContentDirectory:1"));
+				response.append(HTTPXMLHelper.eventProp("TransferIDs"));
+				response.append(HTTPXMLHelper.eventProp("ContainerUpdateIDs"));
+				response.append(HTTPXMLHelper.eventProp("SystemUpdateID",""+DLNAResource.getSystemUpdateId()));
+				response.append(HTTPXMLHelper.EVENT_FOOTER);
 			}
 		} else if (method.equals("POST") && argument.endsWith("upnp/control/content_directory")) {
 			output(output, CONTENT_TYPE_UTF8);
@@ -443,7 +493,7 @@ public class Request extends HTTPResource {
 				response.append(HTTPXMLHelper.SOAP_ENCODING_FOOTER);
 				response.append(CRLF);
 			} else if (soapaction.contains("ContentDirectory:1#Browse") || soapaction.contains("ContentDirectory:1#Search")) {
-				//logger.trace(content);
+				//LOGGER.trace(content);
 				objectID = getEnclosingValue(content, "<ObjectID>", "</ObjectID>");
 				String containerID = null;
 				if ((objectID == null || objectID.length() == 0) && xbox) {
@@ -557,7 +607,7 @@ public class Request extends HTTPResource {
 						totalCount = startingIndex;
 					}
 					response.append("<TotalMatches>").append(totalCount).append("</TotalMatches>");
-				} 
+				}
 				else if(browseFlag!=null && browseFlag.equals("BrowseDirectChildren"))
 					response.append("<TotalMatches>").append(((parentFolder != null) ? parentFolder.childrenNumber() : filessize) - minus).append("</TotalMatches>");
 				else
@@ -580,7 +630,7 @@ public class Request extends HTTPResource {
 				response.append(CRLF);
 				response.append(HTTPXMLHelper.SOAP_ENCODING_FOOTER);
 				response.append(CRLF);
-				//logger.trace(response.toString());
+				//LOGGER.trace(response.toString());
 			}
 		}
 
@@ -592,7 +642,7 @@ public class Request extends HTTPResource {
 			output(output, "");
 			if (!method.equals("HEAD")) {
 				output.write(responseData);
-				//logger.trace(response.toString());
+				//LOGGER.trace(response.toString());
 			}
 		} else if (inputStream != null) {
 			if (CLoverride > -2) {
@@ -605,7 +655,7 @@ public class Request extends HTTPResource {
 				}
 			} else {
 				int cl = inputStream.available();
-				logger.trace("Available Content-Length: " + cl);
+				LOGGER.trace("Available Content-Length: " + cl);
 				output(output, "Content-Length: " + cl);
 			}
 
@@ -621,7 +671,7 @@ public class Request extends HTTPResource {
 			if (lowRange != DLNAMediaInfo.ENDFILE_POS && !method.equals("HEAD")) {
 				sendB = sendBytes(inputStream); //, ((lowRange > 0 && highRange > 0)?(highRange-lowRange):-1)
 			}
-			logger.trace("Sending stream: " + sendB + " bytes of " + argument);
+			LOGGER.trace("Sending stream: " + sendB + " bytes of " + argument);
 			PMS.get().getFrame().setStatusLine(null);
 		} else {
 			if (lowRange > 0 && highRange > 0) {
@@ -635,7 +685,7 @@ public class Request extends HTTPResource {
 
 	private void output(OutputStream output, String line) throws IOException {
 		output.write((line + CRLF).getBytes("UTF-8"));
-		logger.trace("Wrote on socket: " + line);
+		LOGGER.trace("Wrote on socket: " + line);
 	}
 
 	private String getFUTUREDATE() {
@@ -654,7 +704,7 @@ public class Request extends HTTPResource {
 				sendBytes += bytes;
 			}
 		} catch (IOException e) {
-			logger.trace("Sending stream with premature end: " + sendBytes + " bytes of " + argument + ". Reason: " + e.getMessage());
+			LOGGER.trace("Sending stream with premature end: " + sendBytes + " bytes of " + argument + ". Reason: " + e.getMessage());
 		} finally {
 			fis.close();
 		}

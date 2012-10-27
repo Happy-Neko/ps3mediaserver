@@ -19,27 +19,7 @@
 
 package net.pms;
 
-import java.awt.GraphicsEnvironment;
-import java.awt.Toolkit;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.net.BindException;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.Map.Entry;
-import java.util.UUID;
-import java.util.logging.LogManager;
-
-import javax.swing.JOptionPane;
-
+import com.sun.jna.Platform;
 import net.pms.configuration.Build;
 import net.pms.configuration.PmsConfiguration;
 import net.pms.configuration.RendererConfiguration;
@@ -54,20 +34,12 @@ import net.pms.formats.Format;
 import net.pms.formats.FormatFactory;
 import net.pms.gui.DummyFrame;
 import net.pms.gui.IFrame;
-import net.pms.io.BasicSystemUtils;
-import net.pms.io.MacSystemUtils;
-import net.pms.io.OutputParams;
-import net.pms.io.OutputTextConsumer;
-import net.pms.io.ProcessWrapperImpl;
-import net.pms.io.SolarisUtils;
-import net.pms.io.SystemUtils;
-import net.pms.io.WinUtils;
+import net.pms.io.*;
 import net.pms.logging.LoggingConfigFileLoader;
 import net.pms.network.HTTPServer;
 import net.pms.network.NetworkConfiguration;
 import net.pms.network.ProxyServer;
 import net.pms.network.UPNPHelper;
-import net.pms.newgui.GeneralTab;
 import net.pms.newgui.LooksFrame;
 import net.pms.newgui.ProfileChooser;
 import net.pms.update.AutoUpdater;
@@ -75,14 +47,26 @@ import net.pms.util.ProcessUtil;
 import net.pms.util.PropertiesUtil;
 import net.pms.util.SystemErrWrapper;
 import net.pms.util.TaskRunner;
-
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.event.ConfigurationEvent;
 import org.apache.commons.configuration.event.ConfigurationListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.jna.Platform;
+import javax.swing.*;
+import java.awt.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.BindException;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.logging.LogManager;
 
 public class PMS {
 	private static final String SCROLLBARS = "scrollbars";
@@ -100,13 +84,13 @@ public class PMS {
 	public static final String AVS_SEPARATOR = "\1";
 
 	// (innot): The logger used for all logging.
-	private static final Logger logger = LoggerFactory.getLogger(PMS.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(PMS.class);
 
 	// TODO(tcox):  This shouldn't be static
 	private static PmsConfiguration configuration;
 
 	/**Returns a pointer to the main PMS GUI.
-	 * @return {@link IFrame} Main PMS window.
+	 * @return {@link net.pms.gui.IFrame} Main PMS window.
 	 */
 	public IFrame getFrame() {
 		return frame;
@@ -114,9 +98,9 @@ public class PMS {
 
 	/**getRootFolder returns the Root Folder for a given renderer. There could be the case
 	 * where a given media renderer needs a different root structure.
-	 * @param renderer {@link RendererConfiguration} is the renderer for which to get the RootFolder structure. If <b>null</b>, then
+	 * @param renderer {@link net.pms.configuration.RendererConfiguration} is the renderer for which to get the RootFolder structure. If <b>null</b>, then
 	 * the default renderer is used.
-	 * @return {@link RootFolder} The root folder structure for a given renderer
+	 * @return {@link net.pms.dlna.RootFolder} The root folder structure for a given renderer
 	 */
 	public RootFolder getRootFolder(RendererConfiguration renderer) {
 		// something to do here for multiple directories views for each renderer
@@ -144,13 +128,13 @@ public class PMS {
 	public final static SimpleDateFormat sdfHour = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
 
 	/**
-	 * Array of {@link RendererConfiguration} that have been found by PMS.
+	 * Array of {@link net.pms.configuration.RendererConfiguration} that have been found by PMS.
 	 */
 	private final ArrayList<RendererConfiguration> foundRenderers = new ArrayList<RendererConfiguration>();
 
-	/**Adds a {@link RendererConfiguration} to the list of media renderers found. The list is being used, for
+	/**Adds a {@link net.pms.configuration.RendererConfiguration} to the list of media renderers found. The list is being used, for
 	 * example, to give the user a graphical representation of the found media renderers.
-	 * @param mediarenderer {@link RendererConfiguration}
+	 * @param mediarenderer {@link net.pms.configuration.RendererConfiguration}
 	 */
 	public void setRendererfound(RendererConfiguration mediarenderer) {
 		if (!foundRenderers.contains(mediarenderer) && !mediarenderer.isFDSSDP()) {
@@ -182,12 +166,12 @@ public class PMS {
 	}
 
 	/**
-	 * {@link IFrame} object that represents PMS GUI.
+	 * {@link net.pms.gui.IFrame} object that represents PMS GUI.
 	 */
 	IFrame frame;
 
 	/**
-	 * @see Platform#isWindows()
+	 * @see com.sun.jna.Platform#isWindows()
 	 */
 	public boolean isWindows() {
 		return Platform.isWindows();
@@ -196,12 +180,12 @@ public class PMS {
 	private int proxy;
 
 	/**Interface to Windows specific functions, like Windows Registry. registry is set by {@link #init()}.
-	 * @see WinUtils
+	 * @see net.pms.io.WinUtils
 	 */
 	private SystemUtils registry;
 
 	/**
-	 * @see WinUtils
+	 * @see net.pms.io.WinUtils
 	 */
 	public SystemUtils getRegistry() {
 		return registry;
@@ -217,7 +201,7 @@ public class PMS {
 	 * @throws Exception TODO: Check which exceptions to use
 	 */
 	private boolean checkProcessExistence(String name, boolean error, File workDir, String... params) throws Exception {
-		logger.debug("launching: " + params[0]);
+		LOGGER.debug("launching: " + params[0]);
 
 		try {
 			ProcessBuilder pb = new ProcessBuilder(params);
@@ -257,14 +241,14 @@ public class PMS {
 			int exit = process.exitValue();
 			if (exit != 0) {
 				if (error) {
-					logger.info("[" + exit + "] Cannot launch " + name + " / Check the presence of " + params[0] + " ...");
+					LOGGER.info("[" + exit + "] Cannot launch " + name + " / Check the presence of " + params[0] + " ...");
 				}
 				return false;
 			}
 			return true;
 		} catch (Exception e) {
 			if (error) {
-				logger.error("Cannot launch " + name + " / Check the presence of " + params[0] + " ...", e);
+				LOGGER.error("Cannot launch " + name + " / Check the presence of " + params[0] + " ...", e);
 			}
 			return false;
 		}
@@ -277,7 +261,7 @@ public class PMS {
 	private final PrintStream stderr = System.err;
 
 	/**Main resource database that supports search capabilities. Also known as media cache.
-	 * @see DLNAMediaDatabase
+	 * @see net.pms.dlna.DLNAMediaDatabase
 	 */
 	private DLNAMediaDatabase database;
 
@@ -292,7 +276,13 @@ public class PMS {
 	 * (e.g. if the cache is disabled).
 	 */
 	public synchronized DLNAMediaDatabase getDatabase() {
-		return database;
+		if (configuration.getUseCache()) {
+			if (database == null) {
+				initializeDatabase();
+			}
+			return database;
+		}
+		return null;
 	}
 
 	/**Initialisation procedure for PMS.
@@ -316,8 +306,8 @@ public class PMS {
 		if (System.getProperty(CONSOLE) == null) {
 			frame = new LooksFrame(autoUpdater, configuration);
 		} else {
-			logger.info("GUI environment not available");
-			logger.info("Switching to console mode");
+			LOGGER.info("GUI environment not available");
+			LOGGER.info("Switching to console mode");
 			frame = new DummyFrame();
 		}
 		configuration.addConfigurationListener(new ConfigurationListener() {
@@ -333,50 +323,50 @@ public class PMS {
 		frame.setStatusCode(0, Messages.getString("PMS.130"), "connect_no-220.png");
 		proxy = -1;
 
-		logger.info("Starting " + PropertiesUtil.getProjectProperties().get("project.name") + " " + getVersion());
-		logger.info("by shagrath / 2008-2012");
-		logger.info("http://ps3mediaserver.org");
-		logger.info("https://github.com/ps3mediaserver/ps3mediaserver");
-		logger.info("http://ps3mediaserver.blogspot.com");
-		logger.info("");
+        LOGGER.info("Starting " + PropertiesUtil.getProjectProperties().get("project.name") + " " + getVersion());
+        LOGGER.info("by shagrath / 2008-2012");
+        LOGGER.info("http://ps3mediaserver.org");
+        LOGGER.info("https://github.com/ps3mediaserver/ps3mediaserver");
+        LOGGER.info("http://ps3mediaserver.blogspot.com");
+        LOGGER.info("");
 
 		String commitId = PropertiesUtil.getProjectProperties().get("git.commit.id");
 		String commitTime = PropertiesUtil.getProjectProperties().get("git.commit.time");
 		String shortCommitId = commitId.substring(0,  9);
 
-		logger.info("Build: " + shortCommitId + " (" + commitTime + ")");
+		LOGGER.info("Build: " + shortCommitId + " (" + commitTime + ")");
 
 		// Log system properties
 		logSystemInfo();
 
 		String cwd = new File("").getAbsolutePath();
-		logger.info("Working directory: " + cwd);
+		LOGGER.info("Working directory: " + cwd);
 
-		logger.info("Temp folder: " + configuration.getTempFolder());
-		logger.info("Logging config file: " + LoggingConfigFileLoader.getConfigFilePath());
+		LOGGER.info("Temp folder: " + configuration.getTempFolder());
+		LOGGER.info("Logging config file: " + LoggingConfigFileLoader.getConfigFilePath());
 
 		HashMap<String, String> lfps = LoggingConfigFileLoader.getLogFilePaths();
 
 		if (lfps != null && lfps.size() > 0) {
 			if (lfps.size() == 1) {
 				Entry<String, String> entry = lfps.entrySet().iterator().next();
-				logger.info(String.format("%s: %s", entry.getKey(), entry.getValue()));
+				LOGGER.info(String.format("%s: %s", entry.getKey(), entry.getValue()));
 			} else {
-				logger.info("Logging to multiple files:");
+				LOGGER.info("Logging to multiple files:");
 				Iterator<Entry<String, String>> logsIterator = lfps.entrySet().iterator();
 				Entry<String, String> entry;
 				while (logsIterator.hasNext()) {
 					entry = logsIterator.next();
-					logger.info(String.format("%s: %s", entry.getKey(), entry.getValue()));
+					LOGGER.info(String.format("%s: %s", entry.getKey(), entry.getValue()));
 				}
 			}
 		}
 
-		logger.info("");
+		LOGGER.info("");
 
-		logger.info("Profile directory: " + configuration.getProfileDirectory());
+		LOGGER.info("Profile directory: " + configuration.getProfileDirectory());
 		String profilePath = configuration.getProfilePath();
-		logger.info("Profile path: " + profilePath);
+		LOGGER.info("Profile path: " + profilePath);
 
 		File profileFile = new File(profilePath);
 
@@ -385,39 +375,39 @@ public class PMS {
 				profileFile.canRead()  ? "r" : "-",
 				profileFile.canWrite() ? "w" : "-"
 			);
-			logger.info("Profile status: " + status);
+			LOGGER.info("Profile status: " + status);
 		} else {
-			logger.info("Profile status: no such file");
+			LOGGER.info("Profile status: no such file");
 		}
 
-		logger.info("Profile name: " + configuration.getProfileName());
-		logger.info("");
+		LOGGER.info("Profile name: " + configuration.getProfileName());
+		LOGGER.info("");
 
 		RendererConfiguration.loadRendererConfigurations(configuration);
 
-		logger.info("Checking MPlayer font cache. It can take a minute or so.");
+		LOGGER.info("Checking MPlayer font cache. It can take a minute or so.");
 		checkProcessExistence("MPlayer", true, null, configuration.getMplayerPath(), "dummy");
 		if (isWindows()) {
 			checkProcessExistence("MPlayer", true, configuration.getTempFolder(), configuration.getMplayerPath(), "dummy");
 		}
-		logger.info("Done!");
+		LOGGER.info("Done!");
 
 		// check the existence of Vsfilter.dll
 		if (registry.isAvis() && registry.getAvsPluginsDir() != null) {
-			logger.info("Found AviSynth plugins dir: " + registry.getAvsPluginsDir().getAbsolutePath());
+			LOGGER.info("Found AviSynth plugins dir: " + registry.getAvsPluginsDir().getAbsolutePath());
 			File vsFilterdll = new File(registry.getAvsPluginsDir(), "VSFilter.dll");
 			if (!vsFilterdll.exists()) {
-				logger.info("VSFilter.dll is not in the AviSynth plugins directory. This can cause problems when trying to play subtitled videos with AviSynth");
+				LOGGER.info("VSFilter.dll is not in the AviSynth plugins directory. This can cause problems when trying to play subtitled videos with AviSynth");
 			}
 		}
 
 		if (registry.getVlcv() != null && registry.getVlcp() != null) {
-			logger.info("Found VideoLAN version " + registry.getVlcv() + " at: " + registry.getVlcp());
+			LOGGER.info("Found VideoLAN version " + registry.getVlcv() + " at: " + registry.getVlcp());
 		}
 
 		//check if Kerio is installed
 		if (registry.isKerioFirewall()) {
-			logger.info("Detected Kerio firewall");
+			LOGGER.info("Detected Kerio firewall");
 		}
 
 		// force use of specific dvr ms muxer when it's installed in the right place
@@ -445,7 +435,7 @@ public class PMS {
 		try {
 			ExternalFactory.lookup();
 		} catch (Exception e) {
-			logger.error("Error loading plugins", e);
+			LOGGER.error("Error loading plugins", e);
 		}
 
 		// a static block in Player doesn't work (i.e. is called too late).
@@ -456,19 +446,19 @@ public class PMS {
 		// Initialize a player factory to register all players
 		PlayerFactory.initialize(configuration);
 
-		// Add registered player engines
-		frame.addEngines();
-
 		// Instantiate listeners that require registered players.
 		ExternalFactory.instantiateLateListeners();
+
+		// Any plugin-defined players are now registered, create the gui view.
+		frame.addEngines();
 
 		boolean binding = false;
 
 		try {
 			binding = server.start();
 		} catch (BindException b) {
-			logger.info("FATAL ERROR: Unable to bind on port: " + configuration.getServerPort() + ", because: " + b.getMessage());
-			logger.info("Maybe another process is running or the hostname is wrong.");
+			LOGGER.info("FATAL ERROR: Unable to bind on port: " + configuration.getServerPort() + ", because: " + b.getMessage());
+			LOGGER.info("Maybe another process is running or the hostname is wrong.");
 		}
 
 		new Thread("Connection Checker") {
@@ -491,7 +481,7 @@ public class PMS {
 		}
 
 		if (proxy > 0) {
-			logger.info("Starting HTTP Proxy Server on port: " + proxy);
+			LOGGER.info("Starting HTTP Proxy Server on port: " + proxy);
 			proxyServer = new ProxyServer(proxy);
 		}
 
@@ -499,7 +489,7 @@ public class PMS {
 		if (configuration.getUseCache()) {
 			initializeDatabase(); // XXX: this must be done *before* new MediaLibrary -> new MediaLibraryFolder
 			mediaLibrary = new MediaLibrary();
-			logger.info("A tiny cache admin interface is available at: http://" + server.getHost() + ":" + server.getPort() + "/console/home");
+			LOGGER.info("A tiny cache admin interface is available at: http://" + server.getHost() + ":" + server.getPort() + "/console/home");
 		}
 
 		// XXX: this must be called:
@@ -519,27 +509,27 @@ public class PMS {
 					}
 					UPNPHelper.shutDownListener();
 					UPNPHelper.sendByeBye();
-					logger.debug("Forcing shutdown of all active processes");
+					LOGGER.debug("Forcing shutdown of all active processes");
 					for (Process p : currentProcesses) {
 						try {
 							p.exitValue();
 						} catch (IllegalThreadStateException ise) {
-							logger.trace("Forcing shutdown of process: " + p);
+							LOGGER.trace("Forcing shutdown of process: " + p);
 							ProcessUtil.destroy(p);
 						}
 					}
 					get().getServer().stop();
 					Thread.sleep(500);
 				} catch (IOException e) {
-					logger.debug("Caught exception", e);
+					LOGGER.debug("Caught exception", e);
 				} catch (InterruptedException e) {
-					logger.debug("Caught exception", e);
+					LOGGER.debug("Caught exception", e);
 				}
 			}
 		});
 
 		UPNPHelper.sendAlive();
-		logger.trace("Waiting 250 milliseconds...");
+		LOGGER.trace("Waiting 250 milliseconds...");
 		Thread.sleep(250);
 		UPNPHelper.listen();
 
@@ -555,7 +545,6 @@ public class PMS {
 		return mediaLibrary;
 	}
 
-	// FIXME this is duplicated in net/pms/encoders/PlayerFactory.java
 	private SystemUtils createSystemUtils() {
 		if (Platform.isWindows()) {
 			return new WinUtils();
@@ -575,10 +564,10 @@ public class PMS {
 	/**Executes the needed commands in order to make PMS a Windows service that starts whenever the machine is started.
 	 * This function is called from the Network tab.
 	 * @return true if PMS could be installed as a Windows service.
-	 * @see GeneralTab#build()
+	 * @see net.pms.newgui.GeneralTab#build()
 	 */
 	public boolean installWin32Service() {
-		logger.info(Messages.getString("PMS.41"));
+		LOGGER.info(Messages.getString("PMS.41"));
 		String cmdArray[] = new String[]{"win32/service/wrapper.exe", "-r", "wrapper.conf"};
 		OutputParams output = new OutputParams(configuration);
 		output.noexitcheck = true;
@@ -593,8 +582,8 @@ public class PMS {
 	/**Transforms a comma separated list of directory entries into an array of {@link String}.
 	 * Checks that the directory exists and is a valid directory.
 	 * @param log whether to output log information
-	 * @return {@link File}[] Array of directories.
-	 * @throws IOException
+	 * @return {@link java.io.File}[] Array of directories.
+	 * @throws java.io.IOException
 	 */
 
 	// this is called *way* too often (e.g. a dozen times with 1 renderer and 1 shared folder),
@@ -614,15 +603,15 @@ public class PMS {
 			// http://ps3mediaserver.org/forum/viewtopic.php?f=14&t=8883&start=250#p43520
 			folder = folder.replaceAll("&comma;", ",");
 			if (log) {
-				logger.info("Checking shared folder: " + folder);
+				LOGGER.info("Checking shared folder: " + folder);
 			}
 			File file = new File(folder);
 			if (file.exists()) {
 				if (!file.isDirectory()) {
-					logger.warn("The file " + folder + " is not a directory! Please remove it from your Shared folders list on the Navigation/Share Settings tab");
+					LOGGER.warn("The file " + folder + " is not a directory! Please remove it from your Shared folders list on the Navigation/Share Settings tab");
 				}
 			} else {
-				logger.warn("The directory " + folder + " does not exist. Please remove it from your Shared folders list on the Navigation/Share Settings tab");
+				LOGGER.warn("The directory " + folder + " does not exist. Please remove it from your Shared folders list on the Navigation/Share Settings tab");
 			}
 
 			// add the file even if there are problems so that the user can update the shared folders as required.
@@ -639,7 +628,7 @@ public class PMS {
 
 	/**Restarts the server. The trigger is either a button on the main PMS window or via
 	 * an action item.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 */
 	// XXX: don't try to optimize this by reusing the same server instance.
 	// see the comment above HTTPServer.stop()
@@ -647,7 +636,7 @@ public class PMS {
 		TaskRunner.getInstance().submitNamed("restart", true, new Runnable() {
 			public void run() {
 				try {
-					logger.trace("Waiting 1 second...");
+					LOGGER.trace("Waiting 1 second...");
 					UPNPHelper.sendByeBye();
 					server.stop();
 					server = null;
@@ -655,14 +644,14 @@ public class PMS {
 					try {
 						Thread.sleep(1000);
 					} catch (InterruptedException e) {
-						logger.trace("Caught exception", e);
+						LOGGER.trace("Caught exception", e);
 					}
 					server = new HTTPServer(configuration.getServerPort());
 					server.start();
 					UPNPHelper.sendAlive();
 					frame.setReloadable(false);
 				} catch (IOException e) {
-					logger.error("error during restart :" +e.getMessage(), e);
+					LOGGER.error("error during restart :" +e.getMessage(), e);
 				}
 			}
 		});
@@ -679,7 +668,7 @@ public class PMS {
 	 */
 	@Deprecated
 	public static void debug(String msg) {
-		logger.trace(msg);
+		LOGGER.trace(msg);
 	}
 
 	/**
@@ -689,7 +678,7 @@ public class PMS {
 	 */
 	@Deprecated
 	public static void info(String msg) {
-		logger.debug(msg);
+		LOGGER.debug(msg);
 	}
 
 	/**
@@ -700,7 +689,7 @@ public class PMS {
 	 */
 	@Deprecated
 	public static void minimal(String msg) {
-		logger.info(msg);
+		LOGGER.info(msg);
 	}
 
 	/**
@@ -712,7 +701,7 @@ public class PMS {
 	 */
 	@Deprecated
 	public static void error(String msg, Throwable t) {
-		logger.error(msg, t);
+		LOGGER.error(msg, t);
 	}
 
 	/**Universally Unique Identifier used in the UPnP server.
@@ -743,19 +732,19 @@ public class PMS {
 						byte[] addr = getRegistry().getHardwareAddress(ni); // return null when java.net.preferIPv4Stack=true
 						if (addr != null) {
 							uuid = UUID.nameUUIDFromBytes(addr).toString();
-							logger.info(String.format("Generated new UUID based on the MAC address of the network adapter '%s'", ni.getDisplayName()));
+							LOGGER.info(String.format("Generated new UUID based on the MAC address of the network adapter '%s'", ni.getDisplayName()));
 						}
 					}
 				} catch (SocketException e) {
-					logger.debug("Caught exception", e);
+					LOGGER.debug("Caught exception", e);
 				} catch (UnknownHostException e) {
-					logger.debug("Caught exception", e);
+					LOGGER.debug("Caught exception", e);
 				}
 
 				//create random UUID if the generation by MAC address failed
 				if (uuid == null) {
 					uuid = UUID.randomUUID().toString();
-					logger.info("Generated new random UUID");
+					LOGGER.info("Generated new random UUID");
 				}
 
 				//save the newly generated UUID
@@ -763,11 +752,11 @@ public class PMS {
 				try {
 					getConfiguration().save();
 				} catch (ConfigurationException e) {
-					logger.error("Failed to save configuration with new UUID", e);
+					LOGGER.error("Failed to save configuration with new UUID", e);
 				}
 			}
 
-			logger.info("Using the following UUID configured in PMS.conf: " + uuid);
+            LOGGER.info("Using the following UUID configured in PMS.conf: " + uuid);
 		}
 		return "uuid:" + uuid;
 	}
@@ -790,7 +779,7 @@ public class PMS {
 	}
 
 	/**Returns the PMS instance.
-	 * @return {@link PMS}
+	 * @return {@link net.pms.PMS}
 	 */
 	public static PMS get() {
 		// XXX when PMS is run as an application, the instance is initialized via the createInstance call in main().
@@ -810,17 +799,17 @@ public class PMS {
 
 		try {
 			if (instance.init()) {
-				logger.info("The server should now appear on your renderer");
+				LOGGER.info("The server should now appear on your renderer");
 			} else {
-				logger.error("A serious error occurred during PMS init");
+				LOGGER.error("A serious error occurred during PMS init");
 			}
 		} catch (Exception e) {
-			logger.error("A serious error occurred during PMS init", e);
+			LOGGER.error("A serious error occurred during PMS init", e);
 		}
 	}
 
 	/**
-	 * @deprecated Use {@link FormatFactory#getAssociatedExtension(String)}
+	 * @deprecated Use {@link net.pms.formats.FormatFactory#getAssociatedExtension(String)}
 	 * instead.
 	 *
 	 * @param filename
@@ -893,7 +882,7 @@ public class PMS {
 	}
 
 	/**
-	 * @deprecated Use {@link FormatFactory#getExtensions()} instead.
+	 * @deprecated Use {@link net.pms.formats.FormatFactory#getExtensions()} instead.
 	 *
 	 * @return The list of formats. 
 	 */
@@ -901,72 +890,11 @@ public class PMS {
 		return FormatFactory.getExtensions();
 	}
 
-	/**
-	 * @deprecated Use {@link PlayerFactory#registerPlayer(Player)} instead.
-	 *
-	 * Adds a single {@link Player} to the list of Players.
-	 *
-	 * @param player Player to be added to the list.
-	 * @see Player
-	 */
-	@Deprecated
-	public void registerPlayer(Player player) {
-		PlayerFactory.registerPlayer(player);
-	}
-
-	/**
-	 * @deprecated Use {@link PlayerFactory#getPlayers()} instead.
-	 *
-	 * Returns the list of players that have been verified as okay.
-	 * 
-	 * @return The list of players.
-	 */
-	@Deprecated
-	public ArrayList<Player> getPlayers() {
-		return PlayerFactory.getPlayers();
-	}
-
-	/**
-	 * @deprecated Use {@link PlayerFactory#getAllPlayers()} instead.
-	 *
-	 * Returns the list of all players. This includes the ones not verified as
-	 * being okay.
-	 * 
-	 * @return The list of players.
-	 */
-	public ArrayList<Player> getAllPlayers() {
-		return PlayerFactory.getAllPlayers();
-	}
-
-	/**
-	 * @deprecated Use {@link PlayerFactory#getPlayer(Class, Format)} instead.
-	 * 
-	 * @param profileClass
-	 * @param ext
-	 * @return The player if a match could be found
-	 */
-	@Deprecated
-	public Player getPlayer(Class<? extends Player> profileClass, Format ext) {
-		return PlayerFactory.getPlayer(profileClass, ext);
-	}
-
-	/**
-	 * @deprecated Use {@link PlayerFactory#getPlayers(ArrayList, int)} instead.
-	 * 
-	 * @param profileClasses
-	 * @param type
-	 * @return The list of players that match
-	 */
-	@Deprecated
-	public ArrayList<Player> getPlayers(ArrayList<Class<? extends Player>> profileClasses, int type) {
-		return PlayerFactory.getPlayers(profileClasses, type);
-	}
-
 	public void save() {
 		try {
 			configuration.save();
 		} catch (ConfigurationException e) {
-			logger.error("Could not save configuration", e);
+			LOGGER.error("Could not save configuration", e);
 		}
 	}
 
@@ -1014,11 +942,13 @@ public class PMS {
 	 * warnings where appropriate.
 	 */
 	private void logSystemInfo() {
-		logger.info("Java: " + System.getProperty("java.version") + "-" + System.getProperty("java.vendor"));
-		logger.info("OS: " + System.getProperty("os.name") + " " + System.getProperty("os.arch") + " "
-				+ System.getProperty("os.version"));
-		logger.info("Encoding: " + System.getProperty("file.encoding"));
-		logger.info("");
+		long memoryInMB = Runtime.getRuntime().maxMemory() / 1048576;
+
+		LOGGER.info("Java: " + System.getProperty("java.version") + "-" + System.getProperty("java.vendor"));
+		LOGGER.info("OS: " + System.getProperty("os.name") + " " + System.getProperty("os.arch") + " " + System.getProperty("os.version"));
+		LOGGER.info("Encoding: " + System.getProperty("file.encoding"));
+		LOGGER.info("Memory: " + memoryInMB + " " + Messages.getString("StatusTab.12"));
+		LOGGER.info("");
 
 		if (Platform.isMac()) {
 			// The binaries shipped with the Mac OS X version of PMS are being
@@ -1034,17 +964,17 @@ public class PMS {
 					int osVersionMinor = Integer.parseInt(versionNumbers[1]);
 
 					if (osVersionMinor < 6) {
-						logger.warn("-----------------------------------------------------------------");
-						logger.warn("WARNING!");
-						logger.warn("PMS ships with binaries compiled for Mac OS X 10.6 or higher.");
-						logger.warn("You are running an older version of Mac OS X so PMS may not work!");
-						logger.warn("More information in the FAQ:");
-						logger.warn("http://www.ps3mediaserver.org/forum/viewtopic.php?f=6&t=3507&p=66371#p66371");
-						logger.warn("-----------------------------------------------------------------");
-						logger.warn("");
+						LOGGER.warn("-----------------------------------------------------------------");
+						LOGGER.warn("WARNING!");
+						LOGGER.warn("PMS ships with binaries compiled for Mac OS X 10.6 or higher.");
+						LOGGER.warn("You are running an older version of Mac OS X so PMS may not work!");
+						LOGGER.warn("More information in the FAQ:");
+						LOGGER.warn("http://www.ps3mediaserver.org/forum/viewtopic.php?f=6&t=3507&p=66371#p66371");
+						LOGGER.warn("-----------------------------------------------------------------");
+						LOGGER.warn("");
 					}
 				} catch (NumberFormatException e) {
-					logger.debug("Cannot parse minor os.version number");
+					LOGGER.debug("Cannot parse minor os.version number");
 				}
 			}
 		}

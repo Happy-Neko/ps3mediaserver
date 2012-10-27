@@ -2,50 +2,56 @@ package net.pms.configuration;
 
 import net.pms.util.PropertiesUtil;
 
+import java.io.File;
+
+import static org.apache.commons.lang.StringUtils.isNotBlank;
+
 class LinuxDefaultPaths implements ProgramPaths {
+    private final String BINARIES_SEARCH_PATH = getBinariesSearchPath();
+
 	@Override
 	public String getEac3toPath() {
-		return "eac3to";
+		return null;
 	}
 
 	@Override
 	public String getFfmpegPath() {
-		return "ffmpeg";
+		return getBinaryPath("ffmpeg");
 	}
 
 	@Override
 	public String getFlacPath() {
-		return "flac";
+		return getBinaryPath("flac");
 	}
 
 	@Override
 	public String getMencoderPath() {
-		return "mencoder";
+		return getBinaryPath("mencoder");
 	}
 
 	@Override
 	public String getMplayerPath() {
-		return "mplayer";
+		return getBinaryPath("mplayer");
 	}
 
 	@Override
 	public String getTsmuxerPath() {
-		return getBinariesPath() + "linux/tsMuxeR";
+		return getBinaryPath("tsMuxeR");
 	}
 
 	@Override
 	public String getVlcPath() {
-		return "vlc";
+		return getBinaryPath("vlc");
 	}
 
 	@Override
 	public String getDCRaw() {
-		return "dcraw";
+		return getBinaryPath("dcraw");
 	}
 	
 	@Override
 	public String getIMConvertPath() {
-		return "convert";
+		return getBinaryPath("convert");
 	}
 
 	/**
@@ -55,10 +61,10 @@ class LinuxDefaultPaths implements ProgramPaths {
 	 *
 	 * @return The path for binaries.
 	 */
-	private String getBinariesPath() {
+	private String getBinariesSearchPath() {
 		String path = PropertiesUtil.getProjectProperties().get("project.binaries.dir");
 
-		if (path != null && !"".equals(path)) {
+		if (isNotBlank(path)) {
 			if (path.endsWith("/")) {
 				return path;
 			} else {
@@ -68,4 +74,21 @@ class LinuxDefaultPaths implements ProgramPaths {
 			return "";
 		}
 	}
+
+    /**
+     * Returns the path to requested binary tool.
+     * Either absolute if executable found in project.binaries.dir or
+     * short to search in system-wide  PATH.
+     *
+     * @param tool The name of binary tool
+     * @return Path to binary
+     */
+    private String getBinaryPath(String tool) {
+        File f = new File(BINARIES_SEARCH_PATH + tool);
+        if (f.canExecute()) {
+            return BINARIES_SEARCH_PATH + tool;
+        } else {
+            return tool;
+        }
+    }
 }

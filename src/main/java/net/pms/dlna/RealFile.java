@@ -18,22 +18,17 @@
  */
 package net.pms.dlna;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-
 import net.pms.PMS;
 import net.pms.formats.Format;
 import net.pms.formats.FormatFactory;
 import net.pms.util.FileUtil;
 import net.pms.util.ProcessUtil;
-
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.util.ArrayList;
 
 public class RealFile extends MapFile {
 	private static final Logger logger = LoggerFactory.getLogger(RealFile.class);
@@ -57,7 +52,7 @@ public class RealFile extends MapFile {
 		if (getType() == Format.VIDEO && file.exists() && PMS.getConfiguration().getUseSubtitles() && file.getName().length() > 4) {
 			setSrtFile(FileUtil.doesSubtitlesExists(file, null));
 		}
-		boolean valid = file.exists() && (getExt() != null || file.isDirectory());
+		boolean valid = file.exists() && (getFormat() != null || file.isDirectory());
 
 		if (valid && getParent().getDefaultRenderer() != null && getParent().getDefaultRenderer().isMediaParserV2()) {
 			// we need to resolve the dlna resource now
@@ -66,8 +61,10 @@ public class RealFile extends MapFile {
 			{
 				getMedia().setThumbready(false);
 			}
-			if (getMedia() != null && (getMedia().isEncrypted() || getMedia().getContainer() == null || getMedia().getContainer().equals(DLNAMediaLang.UND))) {
-				// fine tuning: bad parsing = no file !
+			// Given that here getFormat() has already matched some (possibly plugin-defined) format:
+			//    Format.UNKNOWN + bad parse = inconclusive
+			//    known types    + bad parse = bad/encrypted file
+			if (getType() != Format.UNKNOWN && getMedia() != null && (getMedia().isEncrypted() || getMedia().getContainer() == null || getMedia().getContainer().equals(DLNAMediaLang.UND))) {
 				valid = false;
 				if (getMedia().isEncrypted()) {
 					logger.info("The file " + file.getAbsolutePath() + " is encrypted. It will be hidden");
@@ -134,8 +131,8 @@ public class RealFile extends MapFile {
 
 	@Override
 	protected void checktype() {
-		if (getExt() == null) {
-			setExt(FormatFactory.getAssociatedExtension(getFile().getAbsolutePath()));
+		if (getFormat() == null) {
+			setFormat(FormatFactory.getAssociatedExtension(getFile().getAbsolutePath()));
 		}
 
 		super.checktype();
@@ -177,11 +174,11 @@ public class RealFile extends MapFile {
 					setMedia(new DLNAMediaInfo());
 				}
 				found = !getMedia().isMediaparsed() && !getMedia().isParsing();
-				if (getExt() != null) {
-					getExt().parse(getMedia(), input, getType(), getParent().getDefaultRenderer());
+				if (getFormat() != null) {
+					getFormat().parse(getMedia(), input, getType(), getParent().getDefaultRenderer());
 				} else //don't think that will ever happen
 				{
-					getMedia().parse(input, getExt(), getType(), false);
+					getMedia().parse(input, getFormat(), getType(), false);
 				}
 				if (found && PMS.getConfiguration().getUseCache()) {
 					DLNAMediaDatabase database = PMS.get().getDatabase();

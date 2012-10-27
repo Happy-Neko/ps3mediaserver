@@ -18,6 +18,7 @@
  */
 package net.pms.dlna;
 
+import net.pms.formats.v2.AudioProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,12 +33,16 @@ import org.slf4j.LoggerFactory;
  */
 public class DLNAMediaAudio extends DLNAMediaLang implements Cloneable {
 	private static final Logger LOGGER = LoggerFactory.getLogger(DLNAMediaAudio.class);
+	private AudioProperties audioProperties = new AudioProperties();
 
 	/**
 	 * @deprecated Use standard getter and setter to access this variable.
 	 */
 	@Deprecated
 	public int bitsperSample;
+
+
+    private int bitRate;
 
 	/**
 	 * @deprecated Use standard getter and setter to access this variable.
@@ -296,6 +301,26 @@ public class DLNAMediaAudio extends DLNAMediaLang implements Cloneable {
 		this.bitsperSample = bitsperSample;
 	}
 
+    /**
+     * Returns audio bitrate.
+     *
+     * @return Audio bitrate.
+     * @since 1.54
+     */
+    public int getBitRate() {
+        return bitRate;
+    }
+
+    /**
+     * Sets audio bitrate.
+     *
+     * @param bitRate Audio bitrate to set.
+     * @since 1.54
+     */
+    public void setBitRate(int bitRate) {
+        this.bitRate = bitRate;
+    }
+
 	/**
 	 * Returns the sample frequency for the audio.
 	 * 
@@ -321,19 +346,24 @@ public class DLNAMediaAudio extends DLNAMediaLang implements Cloneable {
 	 * 
 	 * @return The number of channels
 	 * @since 1.50
+	 * @deprecated Use getAudioProperties().getNumberOfChannels() instead
 	 */
+	@Deprecated
 	public int getNrAudioChannels() {
-		return nrAudioChannels;
+		return audioProperties.getNumberOfChannels();
 	}
 
 	/**
 	 * Sets the number of channels for the audio.
 	 * 
-	 * @param nrAudioChannels The number of channels to set.
+	 * @param numberOfChannels The number of channels to set.
 	 * @since 1.50
+	 * @deprecated Use getAudioProperties().setNumberOfChannels(int numberOfChannels) instead
 	 */
-	public void setNrAudioChannels(int nrAudioChannels) {
-		this.nrAudioChannels = nrAudioChannels;
+	@Deprecated
+	public void setNrAudioChannels(int numberOfChannels) {
+		this.nrAudioChannels = numberOfChannels;
+		audioProperties.setNumberOfChannels(numberOfChannels);
 	}
 
 	/**
@@ -481,19 +511,24 @@ public class DLNAMediaAudio extends DLNAMediaLang implements Cloneable {
 	 * 
 	 * @return The delay.
 	 * @since 1.50
+	 * @deprecated Use getAudioProperties().getAudioDelay() instead
 	 */
+	@Deprecated
 	public int getDelay() {
-		return delay;
+		return audioProperties.getAudioDelay();
 	}
 
 	/**
 	 * Sets the delay for the audio.
 	 * 
-	 * @param delay The delay to set.
+	 * @param audioDelay The delay to set.
 	 * @since 1.50
+	 * @deprecated  Use getAudioProperties().setAudioDelay(int audioDelay) instead
 	 */
-	public void setDelay(int delay) {
-		this.delay = delay;
+	@Deprecated
+	public void setDelay(int audioDelay) {
+		this.delay = audioDelay;
+		audioProperties.setAudioDelay(audioDelay);
 	}
 
 	/**
@@ -534,5 +569,16 @@ public class DLNAMediaAudio extends DLNAMediaLang implements Cloneable {
 	 */
 	public void setMuxingModeAudio(String muxingModeAudio) {
 		this.muxingModeAudio = muxingModeAudio;
+	}
+
+	public AudioProperties getAudioProperties() {
+		return audioProperties;
+	}
+
+	public void setAudioProperties(AudioProperties audioProperties) {
+		if (audioProperties == null) {
+			throw new IllegalArgumentException("Can't set null AudioProperties.");
+		}
+		this.audioProperties = audioProperties;
 	}
 }

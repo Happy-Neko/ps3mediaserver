@@ -18,6 +18,10 @@
  */
 package net.pms.external;
 
+import net.pms.PMS;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -28,11 +32,6 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-
-import net.pms.PMS;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class takes care of registering plugins. Plugin jars are loaded,
@@ -108,6 +107,11 @@ public class ExternalFactory {
 			return;
 		}
 
+		if (!pluginDirectory.canRead()) {
+			LOGGER.warn("Plugin directory is not readable: " + pluginDirectory);
+			return;
+		}
+
 		// Filter all .jar files from the plugin directory
 		File[] jarFiles = pluginDirectory.listFiles(
 			new FileFilter() {
@@ -117,7 +121,7 @@ public class ExternalFactory {
 			}
 		);
 
-		int nJars = jarFiles.length;
+		int nJars = (jarFiles == null) ? 0 : jarFiles.length;
 
 		if (nJars == 0) {
 			LOGGER.info("No plugins found");

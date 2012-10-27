@@ -21,11 +21,21 @@ package net.pms.formats;
 import java.util.ArrayList;
 
 import net.pms.PMS;
+import net.pms.configuration.RendererConfiguration;
+import net.pms.dlna.DLNAMediaInfo;
 import net.pms.encoders.FFMpegAudio;
 import net.pms.encoders.MPlayerAudio;
 import net.pms.encoders.Player;
 
 public class WAV extends Format {
+	/**
+	 * {@inheritDoc} 
+	 */
+	@Override
+	public Identifier getIdentifier() {
+		return Identifier.WAV;
+	}
+
 	public WAV() {
 		type = AUDIO;
 	}

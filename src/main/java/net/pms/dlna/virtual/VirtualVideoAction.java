@@ -18,15 +18,15 @@
  */
 package net.pms.dlna.virtual;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-
 import net.pms.dlna.DLNAMediaAudio;
 import net.pms.dlna.DLNAMediaInfo;
 import net.pms.dlna.DLNAResource;
 import net.pms.formats.FormatFactory;
 import net.pms.network.HTTPResource;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 
 /**
  * Implements a container that when browsed, an action will be performed.
@@ -65,7 +65,7 @@ public abstract class VirtualVideoAction extends DLNAResource {
 		DLNAMediaInfo mediaInfo = new DLNAMediaInfo();
 		mediaInfo.setContainer("mpegps");
 		ArrayList<DLNAMediaAudio> audioCodes = new ArrayList<DLNAMediaAudio>();
-		mediaInfo.setAudioCodes(audioCodes);
+		mediaInfo.setAudioTracksList(audioCodes);
 		mediaInfo.setMimeType("video/mpeg");
 		mediaInfo.setCodecV("mpeg2");
 		mediaInfo.setMediaparsed(true);
@@ -179,7 +179,7 @@ public abstract class VirtualVideoAction extends DLNAResource {
 	 */
 	@Override
 	public boolean isValid() {
-		setExt(FormatFactory.getAssociatedExtension("toto.mpg"));
+		setFormat(FormatFactory.getAssociatedExtension("toto.mpg"));
 		return true;
 	}
 }

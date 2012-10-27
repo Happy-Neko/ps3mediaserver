@@ -18,27 +18,23 @@
  */
 package net.pms.encoders;
 
-import java.awt.Dimension;
-import java.awt.Font;
+import com.jgoodies.forms.builder.PanelBuilder;
+import com.jgoodies.forms.factories.Borders;
+import com.jgoodies.forms.layout.CellConstraints;
+import com.jgoodies.forms.layout.FormLayout;
+import net.pms.Messages;
+import net.pms.PMS;
+import net.pms.configuration.PmsConfiguration;
+import net.pms.dlna.DLNAResource;
+import net.pms.formats.Format;
+
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.StringTokenizer;
-
-import javax.swing.JCheckBox;
-import javax.swing.JComponent;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-
-import net.pms.Messages;
-import net.pms.PMS;
-import net.pms.configuration.PmsConfiguration;
-
-import com.jgoodies.forms.builder.PanelBuilder;
-import com.jgoodies.forms.factories.Borders;
-import com.jgoodies.forms.layout.CellConstraints;
-import com.jgoodies.forms.layout.FormLayout;
 
 public class MEncoderAviSynth extends MEncoderVideo {
 	public MEncoderAviSynth(PmsConfiguration configuration) {
@@ -142,6 +138,29 @@ public class MEncoderAviSynth extends MEncoderVideo {
 
 	@Override
 	public String name() {
-		return "Avisynth/MEncoder";
+		return "AviSynth/MEncoder";
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean isCompatible(DLNAResource resource) {
+		if (resource == null || resource.getFormat().getType() != Format.VIDEO) {
+			return false;
+		}
+
+		Format format = resource.getFormat();
+
+		if (format != null) {
+			Format.Identifier id = format.getIdentifier();
+
+			if (id.equals(Format.Identifier.MKV)
+					|| id.equals(Format.Identifier.MPG)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

@@ -1,7 +1,71 @@
 Changelog:
 ==========
 
-1.53.1 - 2012-??-??
+1.70.0 - 2012-08-31
+
+    Add new default web video engine: FFMpeg Web Video
+    Add support for new web protocols: mmsh:// and mmst://
+    Sort files alphanumerically by default e.g. Episode 2 before Episode 10
+    Auto encoding detection of non UTF-8 external subtitles for Russian, Greek, Hebrew, Chinese, Korean and Japanese languages (leave "Subtitles codepage" option blank)
+    Improved handling of UTF-8 external subtitles
+    Localized #--TRANSCODE--# folder name
+    PMS.conf:
+        - Added transcode_folder_name option to allow #--TRANSCODE--# folder name to be customized (issue GC963)
+    Make example PMS.conf behave more like built-in defaults
+    Restore maximum buffer size to 600 MB (was 400 MB)
+    Prevented image distortion on some DLNA clients with "Keep AC-3 track" option enabled
+    Don't show entries for disabled engines in #--TRANSCODE--# folder
+    Allow Traces tab panel to auto-scroll (thanks, LordQuackstar!)
+    Revert changes to SMP-N100.conf that conflict with Sony Blu-ray players and break MKV support (thanks, mrw1986)
+    Replaced ImageMagick with Thumbnailator for thumbnail generation
+    Fix FFmpeg engine's handling of unsupported custom options (thanks, ajamess)
+    Fixed FFmpeg command line arguments used by tsMuxeR video
+    Added new renderer: Yamaha RX-A1010 (thanks, merelin)
+    Language updates:
+        - Updated Dutch translation (thanks, leroy)
+        - Updated Bulgarian translation (thanks, JORDITO)
+    Fix DNLA 2114 errors when scanning non-readable subfolders with "hide empty folders" enabled
+    Renderers:
+        - Deprecate misnamed TranscodeVideo profile MPEGAC3: use MPEGPSAC3 instead
+        - Document and clean up TranscodeVideo and TranscodeAudio profiles
+    Linux tarball: fix "cannot find tsMuxeR" error
+    MEncoder:
+        - disable AC-3 remux if audio track has delay
+        - disable DTS and LPCM remuxing if tsMuxeR engine is unavailable
+
+1.60.0 - 2012-07-17
+
+    Enabled FFmpeg video player for all platforms
+    Added support for PGS (Blu-ray) subtitles
+    Added support for TX3G (MPEG-4 Timed Text) subtitles
+    Added support for VobSub (DVD) subtitles in MP4 container
+    Better handling of embedded SSA/ASS subs styling
+    Fixed audio track selection for MP4s and MOVs
+    Fixed DV videos detection
+    Added support for WebM videos downloaded from YouTube
+    Optimized CBRVideoBitrate value for Panasonic TVs (thanks, ExSport!)
+    Added new renderer: Sony SMP-N100 (thanks, mrw1986 and guillepalao!)
+    Language updates:
+        - Catalan translation update (thanks, aseques!)
+        - Simplified Chinese translation update (thanks, lovenemesis!)
+    Localized audio and subtitle priority defaults
+
+1.54.0 - 2012-06-25
+
+    Added LPCM transcoding option for all audio tracks
+    Added DTS HD-MA support up to 7.1 channels: DTS core remux, LPCM and AC-3 transcoding
+    Added Dolby TrueHD support up to 7.1 channels: LPCM (recommended) and AC-3 (buggy for 7.1) transcoding
+    Added workaround for 2.0 384 kbits AC-3 PS3 audio bug
+    Added support for DirecTV HR series (thanks, DeFlanko!)
+    Added support for LG's Smart TV Upgrader (LG 600ST)
+    Added support for Yamaha RX-V671 (thanks, adresd!)
+    Added support for OPPO BDP-83 and OPPO BDP-93 (thanks, adresd!)
+    Fixed bug that occurred when resetting cache
+    Made buffer display in megabytes instead of bytes
+    Fixed overscan compensation bug on some renderers (thanks to tMH for reporting the bug!)
+    Updated MPlayer for OSX to SB32
+    Language updates:
+        - CZE translation update (thanks, valib)
 
 1.53.0 - 2012-06-11
 
@@ -30,7 +94,7 @@ Changelog:
 
 1.52.1 - 2012-04-06
 
-    Updated MPlayer to SB29 which fixes AC3 audio sync
+    Updated MPlayer to SB29 which fixes AC-3 audio sync
     Allow JRE 6 instead of just JRE 7
     Language updates:
         - added Turkish (thanks, BrYaNT!)
@@ -80,7 +144,7 @@ Changelog:
     Added Solaris specific ping command (#1277)
     Fixed problem parsing framerates with comma (#1278)
     Fixed bug in AVCHeader scanner
-    Fixed broken MEncoder playback on empty custom settings 
+    Fixed broken MEncoder playback on empty custom settings
     Updated Sony Bravia EX configuration
     Fixed timeshift audio sync problem with tsMuxeR (thanks ExSport!)
     Added option to disable/enable DTS passthrough in video settings folder
@@ -167,7 +231,8 @@ Changelog:
 1.30.0 - 2011-07-05
 
     Backwards-incompatible API changes (for plugin developers/packagers) - see http://tinyurl.com/3hbqv4l for more details
-    Updated OS X binaries (FFmpeg, MEncoder and MPlayer) to fix an AC3 bug and improve internal VOBsub display quality
+    Fix StartStopListener callbacks (GC719)
+    Updated OS X binaries (FFmpeg, MEncoder and MPlayer) to fix an AC-3 bug and improve internal VOBsub display quality
     Optional GUI to allow profile to be selected when PMS starts
     Better UPnP spec compliance
     Logging improvements
@@ -308,7 +373,7 @@ Changelog:
     Externalization of PS3/Xbox playback profiles, it's now possible to create profiles for any media renderer
     Includes preliminary support for Sony Bravia, Popcorn Hour, Samsung Wiselink, Freebox HD, WDTV Live
     Handling of UTF8 and UTF16 encoding, and case insensitive external subtitles
-    DVD ISO remuxed by default / DTS 768kBps support on ps3 
+    DVD ISO remuxed by default / DTS 768kBps support on PS3
     CUE playlist support
     Pseudo chapters support via the #Transcoded folder
     DVD ISO thumbnails support
@@ -354,7 +419,7 @@ Changelog:
 
     - Changes / Features : Windows/Linux
 
-    DTS / DTS-HD core audio tracks are now streamable without reencoding (DVD ISOs not supported yet)
+    DTS / DTS-HD core audio tracks are now streamable without re-encoding (DVD ISOs not supported yet)
     New Option: unification of Mencoder/tsMuxeR engines, including:
     . Automatic choice between H264 muxing or transcoding, based on AVC Level 4.1 compatibility and subtitles configuration
     . Remux on the fly any H264 content from MOV, MP4, and AVI containers (ex: Apple HD Trailers)
@@ -390,24 +455,24 @@ Changelog:
 
     - Changes / Features
 
-    New option to enable video copy on ps3
+    New option to enable video copy on PS3
     RAW images thumbnail support: CR2/CRW/PEF/NEF/ORF/SRF/MRW/DNG/ARW/RAF
     New translations: Spanish (thanks to Jose from www.playstationhoy.com), Dutch (thanks to Vincent Meylof), German (thanks to Jeuki), Russian (thanks to Peter Klassen), Polish (thanks to Maciej Bocian), Greek (thanks to Alexander Polichroniadis), Portuguese (thanks to Hugo Sousa), Finnish (thanks to Ove Sentlig), Norwegian (thanks to Ball80 and Topguy), Swedish (thanks to Dusan Ilic) and Japanese (thanks to Yu)
     New extensions supported: SHN/M2V/M2P
-    tsMuxeR engine can now mux or reencode in AC3/PCM all audio tracks in real time
+    tsMuxeR engine can now mux or re-encode in AC-3/PCM all audio tracks in real time
     Add the experimental mencoder build for multicore on OSX
     DVR-MS windows remuxer now included by default
 
     - Fixes
 
-    tsMuxeR's AC3/LPCM encode/muxing + Mencoder's LPCM remuxing now working on Linux
+    tsMuxeR's AC-3/LPCM encode/muxing + Mencoder's LPCM remuxing now working on Linux
     Fixed LPCM seeking issue
     Fixed regression with PicasaWeb images feed
     Changes in subtitles loading / Fonts support (Default/ASS/Embedded Fonts)
-    Fixed channels order with tsMuxeR engine's DTS->AC3 option
+    Fixed channels order with tsMuxeR engine's DTS->AC-3 option
     Transcode buffer wasn't fully released after end of video
     Fixed bug with shared folders selection on Windows
-    Fixed periodic alive messages sent to ps3
+    Fixed periodic alive messages sent to PS3
     Better dvr-ms media info retrieval
     Updated ffmpeg/mplayer/mencoder/mt builds on Windows and OSX (slight H264 speedup for singlecore)
     Buffer issues with transcoded audio files lasting more than 10 minutes
@@ -427,7 +492,7 @@ Changelog:
     WINDOWS ONLY: Use (only with 720p/1080p H264 content) an experimental mencoder build for multicores : http://code.google.com/soc/2008/ffmpeg/appinfo.html?csaid=9FD2BF705A5D5DBB
     New OSX icon (thanks to Jakob Karlsson)
     Added a "Skip/Force transcode extensions" option added if default settings don't suit you
-    Possibility to only remux AC3 audio tracks and not reencoded them
+    Possibility to only remux AC-3 audio tracks and not re-encoded them
 
     - Fixes
 
@@ -451,7 +516,7 @@ Changelog:
 
     - Fixes
 
-    Major Bug in server start due to a faulty MAC address retrieval 
+    Major Bug in server start due to a faulty MAC address retrieval
     PMS do not start after activating the archive browsing option
     Media library small fixes
     Subtitles now work by default on OSX
@@ -474,7 +539,7 @@ Changelog:
 
     A/V out of sync issues with some ISOs and medias / codecs support improvement (flv, rmvb, hdmov, mp4, multichannels avi, etc.)
     External subtitles not always loaded
-    Upnp advertising issue in search reply to the ps3 (thanks to Daniel Pedersen)
+    Upnp advertising issue in search reply to the PS3 (thanks to Daniel Pedersen)
     SkipLoopFilter is now disabled by default
     Regression since 0.98, server would not start on some machines
     Newest builds of ffmpeg/mplayer/mencoder for win32
@@ -493,7 +558,7 @@ Changelog:
     - Fixes:
 
     m4a and aac are now transcoded by default (iTunes Apple Lossless compatibility)
-    seeking issues with dvr-ms and tsMuxeR with AC3/PCM mode
+    seeking issues with dvr-ms and tsMuxeR with AC-3/PCM mode
     Displayed aspect ratio preserved
 
 1.00 - 2008-12-14
@@ -503,7 +568,7 @@ Changelog:
     GPL licensing :)
     IDX/SUB support for AviSynth ONLY
     Revamped some UI, especially transcoding settings
-    First attempt to make an LPCM or AC3 automatic conversion with tsMuxeR (seeking isn't working well and demuxed audio delays are not managed)
+    First attempt to make an LPCM or AC-3 automatic conversion with tsMuxeR (seeking isn't working well and demuxed audio delays are not managed)
     AviSynth script is now really fully customizable
 
     - Fixes
@@ -513,7 +578,7 @@ Changelog:
     Sync issues management for xvid/mp3
     .ass subtitles files support
     UUID random generation, it's now possible to launch multiple servers on one network.
-    Added wmv binary codecs in Windows package for smooth WMV-HD transcoding  
+    Added wmv binary codecs in Windows package for smooth WMV-HD transcoding
     Rare and random video glitch due to another seeking bug
 
 0.99 - 2008-12-12
@@ -545,7 +610,7 @@ Changelog:
     Customizable AviSynth script
     Audio podcasts, just tested the one from Engadget
     tsMuxeR now working on Linux for basic muxing (don't forget to give it execution rights)
-    Web video streamdump engine (Useful for streams natively supported by ps3, such as mpeg on rtsp)
+    Web video streamdump engine (Useful for streams natively supported by PS3, such as mpeg on rtsp)
     Maximum bitrate management
     Small things: Runnable in console mode under Linux ("PMS.sh console"), Folder prioritization of a specific streaming/transcoding engine, Custom cover art, additional infos on thumbnails
 
@@ -587,7 +652,7 @@ Changelog:
 
 0.94
 
-    Fixes: 2.50 Firmware problem, better pipes and sub processes management 
+    Fixes: 2.50 Firmware problem, better pipes and sub processes management
 
 0.93
 

@@ -18,21 +18,12 @@
  */
 package net.pms.encoders;
 
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.Font;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.swing.JComponent;
-import javax.swing.JTextField;
-
 import com.jgoodies.forms.builder.PanelBuilder;
 import com.jgoodies.forms.factories.Borders;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
-
+import net.pms.Messages;
+import net.pms.PMS;
 import net.pms.configuration.PmsConfiguration;
 import net.pms.configuration.RendererConfiguration;
 import net.pms.dlna.DLNAMediaInfo;
@@ -41,10 +32,15 @@ import net.pms.formats.Format;
 import net.pms.io.OutputParams;
 import net.pms.io.ProcessWrapper;
 import net.pms.io.ProcessWrapperImpl;
-import net.pms.Messages;
-import net.pms.PMS;
-
 import org.apache.commons.lang.StringUtils;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FFMpegDVRMSRemux extends Player {
 	private JTextField altffpath;
@@ -116,7 +112,8 @@ public class FFMpegDVRMSRemux extends Player {
 		String fileName,
 		DLNAResource dlna,
 		DLNAMediaInfo media,
-		OutputParams params) throws IOException {
+		OutputParams params
+	) throws IOException {
 		PmsConfiguration configuration = PMS.getConfiguration();
 		String ffmpegAlternativePath = configuration.getFfmpegAlternativePath();
 		List<String> cmdList = new ArrayList<String>();
@@ -134,10 +131,6 @@ public class FFMpegDVRMSRemux extends Player {
 
 		cmdList.add("-i");
 		cmdList.add(fileName);
-
-		// change this to -metadata title=dummy if this can be made to work with an official ffmpeg build
-		cmdList.add("-title");
-		cmdList.add("dummy");
 
 		for (String arg : args()) {
 			cmdList.add(arg);
@@ -209,5 +202,27 @@ public class FFMpegDVRMSRemux extends Player {
 	@Override
 	public boolean isPlayerCompatible(RendererConfiguration mediaRenderer) {
 		return mediaRenderer.isTranscodeToMPEGPSAC3();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean isCompatible(DLNAResource resource) {
+		if (resource == null || resource.getFormat().getType() != Format.VIDEO) {
+			return false;
+		}
+
+		Format format = resource.getFormat();
+
+		if (format != null) {
+			Format.Identifier id = format.getIdentifier();
+
+			if (id.equals(Format.Identifier.DVRMS)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
