@@ -28,11 +28,11 @@
       <include name="org/beanshell/bsh-core/2.0b4/bsh-core-2.0b4.jar"/>
       <include name="commons-codec/commons-codec/1.6/commons-codec-1.6.jar"/>
       <include name="commons-collections/commons-collections/3.2.1/commons-collections-3.2.1.jar"/>
-      <include name="commons-configuration/commons-configuration/1.7/commons-configuration-1.7.jar"/>
+      <include name="commons-configuration/commons-configuration/1.8/commons-configuration-1.8.jar"/>
       <include name="commons-digester/commons-digester/1.8.1/commons-digester-1.8.1.jar"/>
       <include name="commons-beanutils/commons-beanutils/1.8.3/commons-beanutils-1.8.3.jar"/>
       <include name="commons-httpclient/commons-httpclient/3.1/commons-httpclient-3.1.jar"/>
-      <include name="commons-io/commons-io/1.4/commons-io-1.4.jar"/>
+      <include name="commons-io/commons-io/2.4/commons-io-2.4.jar"/>
       <include name="commons-lang/commons-lang/2.6/commons-lang-2.6.jar"/>
       <include name="com/h2database/h2/1.1.105/h2-1.1.105.jar"/>
       <include name="ch/qos/logback/logback-classic/1.0.0/logback-classic-1.0.0.jar"/>
@@ -53,9 +53,11 @@
       <include name="com/jgoodies/common/${jgoodies-common-version}/jgoodies-common-${jgoodies-common-version}.jar"/>
       <include name="com/jgoodies/forms/${jgoodies-forms-version}/jgoodies-forms-${jgoodies-forms-version}.jar"/>
       <include name="com/jgoodies/looks/${jgoodies-looks-version}/jgoodies-looks-${jgoodies-looks-version}.jar"/>
-      <include name="de/innosystec/java-unrar/${junrar-version}/java-unrar-${junrar-version}.jar"/>
+      <include name="com/github/junrar/junrar/${junrar-version}/junrar-${junrar-version}.jar"/>
       <include name="jwbroek/cuelib/cuelib/${cuelib-version}/cuelib-${cuelib-version}.jar"/>
       <include name="mediautil/mediautil/${mediautil-version}/mediautil-${mediautil-version}.jar"/>
+      <include name="com/googlecode/juniversalchardet/juniversalchardet/1.0.3/juniversalchardet-1.0.3.jar"/>
+      <include name="net/coobird/thumbnailator/0.4.2/thumbnailator-0.4.2.jar"/>
     </fileset>
   </path>
 
@@ -188,21 +190,6 @@
         <mapper type="flatten"/>
     </unzip>
     <delete file="${maven.repo.local}/com/jgoodies/looks/${jgoodies-looks-version}/jgoodies-looks-${jgoodies-looks-version-underscore}.zip"/>
-
-    <mkdir dir="${maven.repo.local}/de/innosystec/java-unrar/${junrar-version}"/>
-    <get src="http://cloud.github.com/downloads/edmund-wagner/junrar/java-unrar-${junrar-version}.zip"
-         dest="${maven.repo.local}/de/innosystec/java-unrar/${junrar-version}/java-unrar-${junrar-version}.zip"
-         usetimestamp="false"
-         ignoreerrors="false">
-    </get>
-    <unzip src="${maven.repo.local}/de/innosystec/java-unrar/${junrar-version}/java-unrar-${junrar-version}.zip"
-        dest="${maven.repo.local}/de/innosystec/java-unrar/${junrar-version}">
-        <patternset>
-            <include name="**/java-unrar-*.jar"/>
-        </patternset>
-        <mapper type="flatten"/>
-    </unzip>
-    <delete file="${maven.repo.local}/de/innosystec/java-unrar/${junrar-version}/java-unrar-${junrar-version}.zip"/>
 
     <mkdir dir="${maven.repo.local}/jwbroek/cuelib/cuelib/${cuelib-version}"/>
     <get src="http://cuelib.googlecode.com/files/cuelib-${cuelib-version}.jar"
