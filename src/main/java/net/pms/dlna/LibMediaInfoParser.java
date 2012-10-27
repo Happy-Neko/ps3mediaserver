@@ -1,6 +1,7 @@
 package net.pms.dlna;
 
 import net.pms.configuration.FormatConfiguration;
+import net.pms.formats.v2.SubtitleType;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -9,8 +10,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.StringTokenizer;
 
-public class MediaInfoParser {
-	private static final Logger logger = LoggerFactory.getLogger(MediaInfoParser.class);
+public class LibMediaInfoParser {
+	private static final Logger logger = LoggerFactory.getLogger(LibMediaInfoParser.class);
 	private static MediaInfo MI;
 	private static Base64 base64;
 
@@ -78,7 +79,12 @@ public class MediaInfoParser {
 							String ovalue = line.substring(point + 1).trim();
 							String value = ovalue.toLowerCase();
 							if (key.equals("Format") || key.startsWith("Format_Version") || key.startsWith("Format_Profile")) {
-								getFormat(step, media, currentAudioTrack, value);
+								if (step == MediaInfo.StreamKind.Text) {
+									// first attempt to detect subtitle track format
+									currentSubTrack.setType(SubtitleType.valueOfLibMediaInfoCodec(value));
+								} else {
+									getFormat(step, media, currentAudioTrack, value);
+								}
 							} else if (key.equals("Duration/String1") && step == MediaInfo.StreamKind.General) {
 								media.setDuration(getDuration(value));
 							} else if (key.equals("Codec_Settings_QPel") && step == MediaInfo.StreamKind.Video) {
@@ -89,7 +95,8 @@ public class MediaInfoParser {
 								media.setMuxingMode(ovalue);
 							} else if (key.equals("CodecID")) {
 								if (step == MediaInfo.StreamKind.Text) {
-									getSubCodec(currentSubTrack, value);
+									// second attempt to detect subtitle track format (CodecID usually is more accurate)
+									currentSubTrack.setType(SubtitleType.valueOfLibMediaInfoCodec(value));
 								} else {
 									getFormat(step, media, currentAudioTrack, value);
 								}
@@ -113,13 +120,15 @@ public class MediaInfoParser {
 								media.setHeight(getPixelValue(value));
 							} else if (key.equals("FrameRate")) {
 								media.setFrameRate(getFPSValue(value));
+							} else if (key.equals("FrameRateMode")) {
+								media.setFrameRateMode(getFrameRateModeValue(value));
 							} else if (key.equals("OverallBitRate")) {
 								if (step == MediaInfo.StreamKind.General) {
 									media.setBitrate(getBitrate(value));
 								}
 							} else if (key.equals("Channel(s)")) {
 								if (step == MediaInfo.StreamKind.Audio) {
-									currentAudioTrack.setNrAudioChannels(getNbChannels(value));
+									currentAudioTrack.getAudioProperties().setNumberOfChannels(value);
 								}
                             } else if (key.equals("BitRate")) {
                                 if (step == MediaInfo.StreamKind.Audio) {
@@ -139,12 +148,9 @@ public class MediaInfoParser {
 									}
 								} else {
 									if (step == MediaInfo.StreamKind.Audio) {
-										currentAudioTrack.setId(media.getAudioCodes().size());
-										if (media.getContainer() != null && (media.getContainer().equals(FormatConfiguration.AVI) || media.getContainer().equals(FormatConfiguration.FLV) || media.getContainer().equals(FormatConfiguration.MOV) || media.getContainer().equals(FormatConfiguration.MP4))) {
-											currentAudioTrack.setId(currentAudioTrack.getId() + 1);
-										}
+										currentAudioTrack.setId(media.getAudioTracksList().size());
 									} else if (step == MediaInfo.StreamKind.Text) {
-										currentSubTrack.setId(media.getSubtitlesCodes().size());
+										currentSubTrack.setId(media.getSubtitleTracksList().size());
 									}
 								}
 							} else if (key.equals("Cover_Data") && step == MediaInfo.StreamKind.General) {
@@ -177,7 +183,7 @@ public class MediaInfoParser {
 								}
 							} else if (key.equals("Video_Delay") && step == MediaInfo.StreamKind.Audio) {
 								try {
-									currentAudioTrack.setDelay(Integer.parseInt(value));
+									currentAudioTrack.getAudioProperties().setAudioDelay(value);
 								} catch (NumberFormatException nfe) {
 									logger.debug("Could not parse delay \"" + value + "\"");
 								}
@@ -214,23 +220,17 @@ public class MediaInfoParser {
 		if (currentAudioTrack.getCodecA() == null) {
 			currentAudioTrack.setCodecA(DLNAMediaLang.UND);
 		}
-		if (currentAudioTrack.getNrAudioChannels() == 0) {
-			currentAudioTrack.setNrAudioChannels(2); //stereo by default
-		}
-		media.getAudioCodes().add(currentAudioTrack);
+		media.getAudioTracksList().add(currentAudioTrack);
 	}
 
 	public static void addSub(DLNAMediaSubtitle currentSubTrack, DLNAMediaInfo media) {
-		if (currentSubTrack.getType() == -1) {
+		if (currentSubTrack.getType() == SubtitleType.UNSUPPORTED) {
 			return;
 		}
 		if (currentSubTrack.getLang() == null) {
 			currentSubTrack.setLang(DLNAMediaLang.UND);
 		}
-		if (currentSubTrack.getType() == 0) {
-			currentSubTrack.setType(DLNAMediaSubtitle.EMBEDDED);
-		}
-		media.getSubtitlesCodes().add(currentSubTrack);
+		media.getSubtitleTracksList().add(currentSubTrack);
 	}
 
 	public static void getFormat(MediaInfo.StreamKind current, DLNAMediaInfo media, DLNAMediaAudio audio, String value) {
@@ -241,6 +241,8 @@ public class MediaInfoParser {
 			format = FormatConfiguration.AVI;
 		} else if (value.startsWith("flash")) {
 			format = FormatConfiguration.FLV;
+		} else if (value.toLowerCase().equals("webm")) {
+			format = FormatConfiguration.WEBM;
 		} else if (value.equals("qt") || value.equals("quicktime")) {
 			format = FormatConfiguration.MOV;
 		} else if (value.equals("isom") || value.startsWith("mp4") || value.equals("20") || value.equals("m4v") || value.startsWith("mpeg-4")) {
@@ -267,7 +269,7 @@ public class MediaInfoParser {
 			format = FormatConfiguration.MJPEG;
 		} else if (value.contains("div") || value.contains("dx")) {
 			format = FormatConfiguration.DIVX;
-		} else if (value.contains("dv") && !value.equals("dvr")) {
+		} else if (value.matches("(?i)(dv)|(cdv.?)|(dc25)|(dcap)|(dvc.?)|(dvs.?)|(dvrs)|(dv25)|(dv50)|(dvan)|(dvh.?)|(dvis)|(dvl.?)|(dvnm)|(dvp.?)|(mdvf)|(pdvc)|(r411)|(r420)|(sdcc)|(sl25)|(sl50)|(sldv)")) {
 			format = FormatConfiguration.DV;
 		} else if (value.contains("mpeg video")) {
 			format = FormatConfiguration.MPEG2;
@@ -356,17 +358,6 @@ public class MediaInfoParser {
 		}
 	}
 
-	public static void getSubCodec(DLNAMediaSubtitle subt, String value) {
-		if (value.equals("s_text/ass") || value.equals("s_text/ssa")) {
-			subt.setType(DLNAMediaSubtitle.ASS);
-		} else if (value.equals("pgs")) {
-			subt.setType(-1); // PGS not yet supported
-		} else if (value.equals("s_text/utf8")) {
-			subt.setType(DLNAMediaSubtitle.EMBEDDED);
-			subt.setFileUtf8(true);
-		}
-	}
-
 	public static int getPixelValue(String value) {
 		if (value.indexOf("pixel") > -1) {
 			value = value.substring(0, value.indexOf("pixel"));
@@ -394,30 +385,6 @@ public class MediaInfoParser {
         }
 	}
 
-	public static int getNbChannels(String value) {
-		if (value.indexOf("channel") > -1) {
-			value = value.substring(0, value.indexOf("channel"));
-		}
-		value = value.trim();
-
-		// Audio is DTS-ES (6.1 channels) but MEncoder only supports either 2, 4, 6 or 8 for channel values so we use 8
-		if (value.equals("7 / 6")) {
-			value = "8";
-		}
-
-		if (value.contains("8 / 6") || value.contains("6 / 8")) {
-			value = "8";
-		}
-
-		try {
-			int channels = Integer.parseInt(value);
-			return channels;
-		} catch(NumberFormatException e) {
-			logger.info("Unknown number of audio channels detected. Using 6.");
-			return 6;
-		}
-	}
-
 	public static int getSpecificID(String value) {
 		if (value.indexOf("(0x") > -1) {
 			value = value.substring(0, value.indexOf("(0x"));
@@ -443,6 +410,14 @@ public class MediaInfoParser {
 	public static String getFPSValue(String value) {
 		if (value.indexOf("fps") > -1) {
 			value = value.substring(0, value.indexOf("fps"));
+		}
+		value = value.trim();
+		return value;
+	}
+
+	public static String getFrameRateModeValue(String value) {
+		if (value.indexOf("/") > -1) {
+			value = value.substring(0, value.indexOf("/"));
 		}
 		value = value.trim();
 		return value;

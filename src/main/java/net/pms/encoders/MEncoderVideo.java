@@ -27,10 +27,13 @@ import com.jgoodies.forms.layout.FormLayout;
 import com.sun.jna.Platform;
 import net.pms.Messages;
 import net.pms.PMS;
+import net.pms.configuration.FormatConfiguration;
 import net.pms.configuration.PmsConfiguration;
 import net.pms.configuration.RendererConfiguration;
 import net.pms.dlna.*;
 import net.pms.formats.Format;
+import net.pms.formats.v2.SubtitleType;
+import net.pms.formats.v2.SubtitleUtils;
 import net.pms.io.*;
 import net.pms.network.HTTPResource;
 import net.pms.newgui.FontFileFilter;
@@ -38,9 +41,9 @@ import net.pms.newgui.LooksFrame;
 import net.pms.newgui.MyComboBoxModel;
 import net.pms.newgui.RestrictedFileSystemView;
 import net.pms.util.CodecUtil;
+import net.pms.util.FileUtil;
 import net.pms.util.FormLayoutUtil;
 import net.pms.util.ProcessUtil;
-import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,10 +56,15 @@ import java.io.PrintWriter;
 import java.util.*;
 import java.util.List;
 
+import static net.pms.formats.v2.AudioUtils.getLPCMChannelMappingForMencoder;
+import static org.apache.commons.lang.BooleanUtils.isTrue;
+import static org.apache.commons.lang.StringUtils.*;
+
 public class MEncoderVideo extends Player {
 	private static final Logger LOGGER = LoggerFactory.getLogger(MEncoderVideo.class);
 	private static final String COL_SPEC = "left:pref, 3dlu, p:grow, 3dlu, right:p:grow, 3dlu, p:grow, 3dlu, right:p:grow,3dlu, p:grow, 3dlu, right:p:grow,3dlu, pref:grow";
 	private static final String ROW_SPEC = "p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu,p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 9dlu, p, 2dlu, p, 2dlu, p , 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p";
+	private static final String REMOVE_OPTION = "---REMOVE-ME---"; // use an out-of-band option that can't be confused with a real option
 
 	private JTextField mencoder_ass_scale;
 	private JTextField mencoder_ass_margin;
@@ -118,11 +126,10 @@ public class MEncoderVideo extends Player {
 	@Deprecated
 	protected String overriddenMainArgs[];
 
-	protected boolean dts;
+	protected boolean dtsRemux;
 	protected boolean pcm;
-	protected boolean mux;
 	protected boolean ovccopy;
-	protected boolean oaccopy;
+	protected boolean ac3Remux;
 	protected boolean mpegts;
 	protected boolean wmv;
 
@@ -278,7 +285,7 @@ public class MEncoderVideo extends Player {
 				codecPanel.add(scrollPaneDefault, BorderLayout.CENTER);
 				codecPanel.add(customPanel, BorderLayout.SOUTH);
 
-				while (JOptionPane.showOptionDialog((JFrame) (SwingUtilities.getWindowAncestor((Component) PMS.get().getFrame())),
+				while (JOptionPane.showOptionDialog(SwingUtilities.getWindowAncestor((Component) PMS.get().getFrame()),
 					codecPanel, Messages.getString("MEncoderVideo.34"), JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE, null, null, null) == JOptionPane.OK_OPTION) {
 					String newCodecparam = textArea.getText();
 					DLNAMediaInfo fakemedia = new DLNAMediaInfo();
@@ -287,17 +294,17 @@ public class MEncoderVideo extends Player {
 					fakemedia.setCodecV("mpeg4");
 					fakemedia.setContainer("matroska");
 					fakemedia.setDuration(45d*60);
-					audio.setNrAudioChannels(2);
+					audio.getAudioProperties().setNumberOfChannels(2);
 					fakemedia.setWidth(1280);
 					fakemedia.setHeight(720);
 					audio.setSampleFrequency("48000");
 					fakemedia.setFrameRate("23.976");
-					fakemedia.getAudioCodes().add(audio);
+					fakemedia.getAudioTracksList().add(audio);
 					String result[] = getSpecificCodecOptions(newCodecparam, fakemedia, new OutputParams(configuration), "dummy.mpg", "dummy.srt", false, true);
 
 					if (result.length > 0 && result[0].startsWith("@@")) {
 						String errorMessage = result[0].substring(2);
-						JOptionPane.showMessageDialog((JFrame) (SwingUtilities.getWindowAncestor((Component) PMS.get().getFrame())), errorMessage);
+						JOptionPane.showMessageDialog(SwingUtilities.getWindowAncestor((Component) PMS.get().getFrame()), errorMessage);
 
 					} else {
 						configuration.setCodecSpecificConfig(newCodecparam);
@@ -543,6 +550,10 @@ public class MEncoderVideo extends Player {
 
 		Object data[] = new Object[]{
 			configuration.getMencoderSubCp(),
+			Messages.getString("MEncoderVideo.129"),
+			Messages.getString("MEncoderVideo.130"),
+			Messages.getString("MEncoderVideo.131"),
+			Messages.getString("MEncoderVideo.132"),
 			Messages.getString("MEncoderVideo.96"),
 			Messages.getString("MEncoderVideo.97"),
 			Messages.getString("MEncoderVideo.98"),
@@ -589,6 +600,20 @@ public class MEncoderVideo extends Player {
 
 					configuration.setMencoderSubCp(s);
 				}
+			}
+		});
+		subcp.getEditor().getEditorComponent().addKeyListener(new KeyListener() {
+			@Override
+			public void keyTyped(KeyEvent e) {
+			}
+
+			@Override
+			public void keyPressed(KeyEvent e) {
+			}
+
+			@Override
+			public void keyReleased(KeyEvent e) {
+				subcp.getItemListeners()[0].itemStateChanged(new ItemEvent(subcp, 0, subcp.getEditor().getItem(), ItemEvent.SELECTED));
 			}
 		});
 
@@ -953,7 +978,7 @@ public class MEncoderVideo extends Player {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				Color newColor = JColorChooser.showDialog(
-					(JFrame) (SwingUtilities.getWindowAncestor((Component) PMS.get().getFrame())),
+						SwingUtilities.getWindowAncestor((Component) PMS.get().getFrame()),
 					Messages.getString("MEncoderVideo.125"),
 					subColor.getBackground()
 				);
@@ -1028,15 +1053,36 @@ public class MEncoderVideo extends Player {
 	}
 
 	protected String[] getDefaultArgs() {
-		return new String[]{
-			"-quiet",
-			"-oac", oaccopy ? "copy" : (pcm ? "pcm" : "lavc"),
-			"-of", (wmv || mpegts) ? "lavf" : (pcm && avisynth()) ? "avi" : (((pcm || dts || mux) ? "rawvideo" : "mpeg")),
-			(wmv || mpegts) ? "-lavfopts" : "-quiet",
-			wmv ? "format=asf" : (mpegts ? "format=mpegts" : "-quiet"),
-			"-mpegopts", "format=mpeg2:muxrate=500000:vbuf_size=1194:abuf_size=64",
-			"-ovc", (mux || ovccopy) ? "copy" : "lavc"
-		};
+		List<String> defaultArgsList = new ArrayList<String>();
+
+		defaultArgsList.add("-msglevel");
+		defaultArgsList.add("statusline=2");
+
+		defaultArgsList.add("-oac");
+		defaultArgsList.add((ac3Remux || dtsRemux) ? "copy" : (pcm ? "pcm" : "lavc"));
+
+		defaultArgsList.add("-of");
+		defaultArgsList.add((wmv || mpegts) ? "lavf" : ((pcm && avisynth()) ? "avi" : ((pcm || dtsRemux) ? "rawvideo" : "mpeg")));
+
+		if (wmv) {
+			defaultArgsList.add("-lavfopts");
+			defaultArgsList.add("format=asf");
+		} else if (mpegts) {
+			defaultArgsList.add("-lavfopts");
+			defaultArgsList.add("format=mpegts");
+		}
+
+		defaultArgsList.add("-mpegopts");
+		defaultArgsList.add("format=mpeg2:muxrate=500000:vbuf_size=1194:abuf_size=64");
+
+
+		defaultArgsList.add("-ovc");
+		defaultArgsList.add(ovccopy ? "copy" : "lavc");
+
+		String[] defaultArgsArray = new String[defaultArgsList.size()];
+		defaultArgsList.toArray(defaultArgsArray);
+
+		return defaultArgsArray;
 	}
 
 	private String[] sanitizeArgs(String[] args) {
@@ -1113,7 +1159,7 @@ public class MEncoderVideo extends Player {
 			bitrate = bitrate.substring(0, bitrate.indexOf("(")).trim();
 		}
 
-		if (StringUtils.isBlank(bitrate)) {
+		if (isBlank(bitrate)) {
 			bitrate = "0";
 		}
 
@@ -1123,7 +1169,7 @@ public class MEncoderVideo extends Player {
 	}
 
 	/**
-	 * Note: This is not exact, the bitrate can go above this but it is generally pretty good.
+	 * Note: This is not exact. The bitrate can go above this but it is generally pretty good.
 	 * @return The maximum bitrate the video should be along with the buffer size using MEncoder vars
 	 */
 	private String addMaximumBitrateConstraints(String encodeSettings, DLNAMediaInfo media, String quality, RendererConfiguration mediaRenderer, String audioType) {
@@ -1134,7 +1180,7 @@ public class MEncoderVideo extends Player {
 			rendererMaxBitrates = getVideoBitrateConfig(mediaRenderer.getMaxVideoBitrate());
 		}
 
-		if ((defaultMaxBitrates[0] == 0 && rendererMaxBitrates[0] > 0) || rendererMaxBitrates[0] < defaultMaxBitrates[0] && rendererMaxBitrates[0] > 0) {
+		if ((rendererMaxBitrates[0] > 0) && ((defaultMaxBitrates[0] == 0) || (rendererMaxBitrates[0] < defaultMaxBitrates[0]))) {
 			defaultMaxBitrates = rendererMaxBitrates;
 		}
 
@@ -1197,10 +1243,17 @@ public class MEncoderVideo extends Player {
 		boolean avisynth = avisynth();
 
 		setAudioAndSubs(fileName, media, params, configuration);
-		String subString = null;
+		String externalSubtitlesFileName = null;
 
-		if (params.sid != null && params.sid.getPlayableFile() != null) {
-			subString = ProcessUtil.getShortFileNameIfWideChars(params.sid.getPlayableFile().getAbsolutePath());
+		if (params.sid != null && params.sid.isExternal()) {
+			if (params.sid.isExternalFileUtf16()) {
+				// convert UTF-16 -> UTF-8
+				File convertedSubtitles = new File(PMS.getConfiguration().getTempFolder(), "utf8_" + params.sid.getExternalFile().getName());
+				FileUtil.convertFileFromUtf16ToUtf8(params.sid.getExternalFile(), convertedSubtitles);
+				externalSubtitlesFileName = ProcessUtil.getShortFileNameIfWideChars(convertedSubtitles.getAbsolutePath());
+			} else {
+				externalSubtitlesFileName = ProcessUtil.getShortFileNameIfWideChars(params.sid.getExternalFile().getAbsolutePath());
+			}
 		}
 
 		InputFile newInput = new InputFile();
@@ -1220,6 +1273,10 @@ public class MEncoderVideo extends Player {
 			&& (dlna.getParent() instanceof FileTranscodeVirtualFolder);
 
 		ovccopy = false;
+		pcm = false;
+		ac3Remux = false;
+		dtsRemux = false;
+		wmv = false;
 
 		int intOCW = 0;
 		int intOCH = 0;
@@ -1252,19 +1309,19 @@ public class MEncoderVideo extends Player {
 				intOCH == 0
 			)
 		) {
-			String sArgs[] = getSpecificCodecOptions(
+			String expertOptions[] = getSpecificCodecOptions(
 				configuration.getCodecSpecificConfig(),
 				media,
 				params,
 				fileName,
-				subString,
+				externalSubtitlesFileName,
 				configuration.isMencoderIntelligentSync(),
 				false
 			);
 
 			boolean nomux = false;
 
-			for (String s : sArgs) {
+			for (String s : expertOptions) {
 				if (s.equals("-nomux")) {
 					nomux = true;
 				}
@@ -1285,19 +1342,19 @@ public class MEncoderVideo extends Player {
 				return tv.launchTranscode(fileName, dlna, media, params);
 			}
 		} else if (params.sid == null && dvd && configuration.isMencoderRemuxMPEG2() && params.mediaRenderer.isMpeg2Supported()) {
-			String sArgs[] = getSpecificCodecOptions(
+			String expertOptions[] = getSpecificCodecOptions(
 				configuration.getCodecSpecificConfig(),
 				media,
 				params,
 				fileName,
-				subString,
+				externalSubtitlesFileName,
 				configuration.isMencoderIntelligentSync(),
 				false
 			);
 
 			boolean nomux = false;
 
-			for (String s : sArgs) {
+			for (String s : expertOptions) {
 				if (s.equals("-nomux")) {
 					nomux = true;
 				}
@@ -1309,29 +1366,27 @@ public class MEncoderVideo extends Player {
 		}
 
 		String vcodec = "mpeg2video";
-		wmv = false;
 
 		if (params.mediaRenderer.isTranscodeToWMV()) {
 			wmv = true;
 			vcodec = "wmv2"; // http://wiki.megaframe.org/wiki/Ubuntu_XBOX_360#MEncoder not usable in streaming
 		}
 
-		mpegts = false;
-
-		if (params.mediaRenderer.isTranscodeToMPEGTSAC3()) {
-			mpegts = true;
-		}
-
-		oaccopy = false;
+		mpegts = params.mediaRenderer.isTranscodeToMPEGTSAC3();
 
         // disable AC3 remux for stereo tracks with 384 kbits bitrate and PS3 renderer (PS3 FW bug?)
-        boolean ps3_and_stereo_and_384_kbits = params.aid != null && (params.mediaRenderer.getRendererName().equalsIgnoreCase("Playstation 3") && params.aid.getNrAudioChannels() == 2) && (params.aid.getBitRate() > 370000 && params.aid.getBitRate() < 400000);
-        if (configuration.isRemuxAC3() && params.aid != null && params.aid.isAC3() && !ps3_and_stereo_and_384_kbits && !avisynth() && params.mediaRenderer.isTranscodeToAC3()) {
+		boolean ps3_and_stereo_and_384_kbits = params.aid != null
+			&& (params.mediaRenderer.isPS3() && params.aid.getAudioProperties().getNumberOfChannels() == 2)
+			&& (params.aid.getBitRate() > 370000 && params.aid.getBitRate() < 400000);
+
+		final boolean isTSMuxerVideoEngineEnabled = PMS.getConfiguration().getEnginesAsList(PMS.get().getRegistry()).contains(TSMuxerVideo.ID);
+		final boolean mencoderAC3RemuxAudioDelayBug = (params.aid != null) && (params.aid.getAudioProperties().getAudioDelay() != 0) && (params.timeseek == 0);
+        if (!mencoderAC3RemuxAudioDelayBug && configuration.isRemuxAC3() && params.aid != null && params.aid.isAC3() && !ps3_and_stereo_and_384_kbits && !avisynth() && params.mediaRenderer.isTranscodeToAC3()) {
 			// AC3 remux takes priority
-			oaccopy = true;
+			ac3Remux = true;
 		} else {
 			// now check for DTS remux and LPCM streaming
-			dts = configuration.isDTSEmbedInPCM() &&
+			dtsRemux = isTSMuxerVideoEngineEnabled && configuration.isDTSEmbedInPCM() &&
 				(
 					!dvd ||
 					configuration.isMencoderRemuxMPEG2()
@@ -1339,7 +1394,7 @@ public class MEncoderVideo extends Player {
 				params.aid.isDTS() &&
 				!avisynth() &&
 				params.mediaRenderer.isDTSPlayable();
-			pcm = configuration.isMencoderUsePcm() &&
+			pcm = isTSMuxerVideoEngineEnabled && configuration.isMencoderUsePcm() &&
 				(
 					!dvd ||
 					configuration.isMencoderRemuxMPEG2()
@@ -1348,7 +1403,7 @@ public class MEncoderVideo extends Player {
 				&& !(media.getContainer().equals("mp4") && !media.getCodecV().equals("h264"))
 				&& params.aid != null &&
 				(
-					(params.aid.isDTS() && params.aid.getNrAudioChannels() <= 6) || // disable 7.1 DTS-HD => LPCM because of channels mapping bug
+					(params.aid.isDTS() && params.aid.getAudioProperties().getNumberOfChannels() <= 6) || // disable 7.1 DTS-HD => LPCM because of channels mapping bug
 					params.aid.isLossless() ||
 					params.aid.isTrueHD() ||
 					(
@@ -1367,45 +1422,44 @@ public class MEncoderVideo extends Player {
 				) && params.mediaRenderer.isLPCMPlayable();
 		}
 
-		if (dts || pcm) {
-			if (dts) {
-				oaccopy = true;
-			}
-
+		if (dtsRemux || pcm) {
 			params.losslessaudio = true;
 			params.forceFps = media.getValidFps(false);
 		}
 
 		// mpeg2 remux still buggy with mencoder :\
-		if (!pcm && !dts && !mux && ovccopy) {
-			ovccopy = false;
-		}
+		// TODO when we can still use it?
+		ovccopy = false;
 
 		if (pcm && avisynth()) {
 			params.avidemux = true;
 		}
 
+		int channels;
+		if (ac3Remux) {
+			channels = params.aid.getAudioProperties().getNumberOfChannels(); // ac3 remux
+		} else if (dtsRemux || wmv) {
+			channels = 2;
+		} else if (pcm) {
+			channels = params.aid.getAudioProperties().getNumberOfChannels();
+		} else {
+			channels = configuration.getAudioChannelCount(); // 5.1 max for ac3 encoding
+		}
+		LOGGER.trace("channels=" + channels);
+
 		String add = "";
 		String rendererMencoderOptions = params.mediaRenderer.getCustomMencoderOptions(); // default: empty string
-		String mencoderCustomOptions = configuration.getMencoderCustomOptions(); // default: empty string
+		String globalMencoderOptions = configuration.getMencoderCustomOptions(); // default: empty string
 
-		String combinedCustomOptions = StringUtils.defaultString(mencoderCustomOptions)
+		String combinedCustomOptions = defaultString(globalMencoderOptions)
 			+ " "
-			+ StringUtils.defaultString(rendererMencoderOptions);
+			+ defaultString(rendererMencoderOptions);
 
 		if (!combinedCustomOptions.contains("-lavdopts")) {
 			add = " -lavdopts debug=0";
 		}
 
-		int channels = wmv ? 2 : configuration.getAudioChannelCount();
-
-		if (media != null && params.aid != null) {
-			channels = wmv ? 2 : CodecUtil.getRealChannelCount(configuration, params.aid);
-		}
-
-		LOGGER.trace("channels=" + channels);
-
-		if (StringUtils.isNotBlank(rendererMencoderOptions)) {
+		if (isNotBlank(rendererMencoderOptions)) {
 			/*
 			 * ignore the renderer's custom MEncoder options if a) we're streaming a DVD (i.e. via dvd://)
 			 * or b) the renderer's MEncoder options contain overscan settings (those are handled
@@ -1421,8 +1475,8 @@ public class MEncoderVideo extends Player {
 
 		StringTokenizer st = new StringTokenizer(
 			"-channels " + channels
-			+ (StringUtils.isNotBlank(mencoderCustomOptions) ? " " + mencoderCustomOptions : "")
-			+ (StringUtils.isNotBlank(rendererMencoderOptions) ? " " + rendererMencoderOptions : "")
+			+ (isNotBlank(globalMencoderOptions) ? " " + globalMencoderOptions : "")
+			+ (isNotBlank(rendererMencoderOptions) ? " " + rendererMencoderOptions : "")
 			+ add,
 			" "
 		);
@@ -1431,30 +1485,32 @@ public class MEncoderVideo extends Player {
 		// called below) store the renderer-specific (i.e. not global) MEncoder options?
 		overriddenMainArgs = new String[st.countTokens()];
 
-		int i = 0;
-		boolean handleToken = false;
-		int nThreads = (dvd || fileName.toLowerCase().endsWith("dvr-ms")) ?
-			1 :
-			configuration.getMencoderMaxThreads();
+		{
+			int nThreads = (dvd || fileName.toLowerCase().endsWith("dvr-ms")) ?
+				1 :
+				configuration.getMencoderMaxThreads();
+			boolean handleToken = false;
+			int i = 0;
 
-		while (st.hasMoreTokens()) {
-			String token = st.nextToken().trim();
+			while (st.hasMoreTokens()) {
+				String token = st.nextToken().trim();
 
-			if (handleToken) {
-				token += ":threads=" + nThreads;
+				if (handleToken) {
+					token += ":threads=" + nThreads;
 
-				if (configuration.getSkipLoopFilterEnabled() && !avisynth()) {
-					token += ":skiploopfilter=all";
+					if (configuration.getSkipLoopFilterEnabled() && !avisynth()) {
+						token += ":skiploopfilter=all";
+					}
+
+					handleToken = false;
 				}
 
-				handleToken = false;
-			}
+				if (token.toLowerCase().contains("lavdopts")) {
+					handleToken = true;
+				}
 
-			if (token.toLowerCase().contains("lavdopts")) {
-				handleToken = true;
+				overriddenMainArgs[i++] = token;
 			}
-
-			overriddenMainArgs[i++] = token;
 		}
 
 		if (configuration.getMencoderMainSettings() != null) {
@@ -1462,7 +1518,7 @@ public class MEncoderVideo extends Player {
 			String customSettings = params.mediaRenderer.getCustomMencoderQualitySettings();
 
 			// Custom settings in PMS may override the settings of the saved configuration
-			if (StringUtils.isNotBlank(customSettings)) {
+			if (isNotBlank(customSettings)) {
 				mainConfig = customSettings;
 			}
 
@@ -1481,7 +1537,7 @@ public class MEncoderVideo extends Player {
 
 			String audioType = "ac3";
 
-			if (dts) {
+			if (dtsRemux) {
 				audioType = "dts";
 			} else if (pcm) {
 				audioType = "pcm";
@@ -1489,21 +1545,31 @@ public class MEncoderVideo extends Player {
 
 			encodeSettings = addMaximumBitrateConstraints(encodeSettings, media, mainConfig, params.mediaRenderer, audioType);
 			st = new StringTokenizer(encodeSettings, " ");
-			int oldc = overriddenMainArgs.length;
-			overriddenMainArgs = Arrays.copyOf(overriddenMainArgs, overriddenMainArgs.length + st.countTokens());
-			i = oldc;
 
-			while (st.hasMoreTokens()) {
-				overriddenMainArgs[i++] = st.nextToken();
+			{
+				int i = overriddenMainArgs.length; // old length
+				overriddenMainArgs = Arrays.copyOf(overriddenMainArgs, overriddenMainArgs.length + st.countTokens());
+
+				while (st.hasMoreTokens()) {
+					overriddenMainArgs[i++] = st.nextToken();
+				}
 			}
 		}
 
 		boolean foundNoassParam = false;
 
 		if (media != null) {
-			String sArgs [] = getSpecificCodecOptions(configuration.getCodecSpecificConfig(), media, params, fileName, subString, configuration.isMencoderIntelligentSync(), false);
+			String expertOptions [] = getSpecificCodecOptions(
+				configuration.getCodecSpecificConfig(),
+				media,
+				params,
+				fileName,
+				externalSubtitlesFileName,
+				configuration.isMencoderIntelligentSync(),
+				false
+			);
 
-			for (String s : sArgs) {
+			for (String s : expertOptions) {
 				if (s.equals("-noass")) {
 					foundNoassParam = true;
 				}
@@ -1516,33 +1582,20 @@ public class MEncoderVideo extends Player {
 			int subtitleMargin = 0;
 			int userMargin     = 0;
 
-			// Use ASS flag (and therefore ASS font styles) for all subtitled files except vobsub, embedded, dvd and mp4 container with srt
-			// Note: The MP4 container with SRT rule is a workaround for MEncoder r30369. If there is ever a later version of MEncoder that supports external srt subs we should use that. As of r32848 that isn't the case
-			if (
-				(
-					(
-						params.sid.isFileUtf8() &&
-						params.sid.getType() == DLNAMediaSubtitle.EMBEDDED
-					) ||
-					params.sid.getType() != DLNAMediaSubtitle.EMBEDDED
-				) &&
-				params.sid.getType() != DLNAMediaSubtitle.VOBSUB &&
-				!(
-					params.sid.getType() == DLNAMediaSubtitle.SUBRIP &&
-					media.getContainer().equals("mp4")
-				) &&
-				configuration.isMencoderAss() &&   // GUI: enable subtitles formating
-				!foundNoassParam &&                // GUI: codec specific options
-				!dvd
-			) {
+			// Use ASS flag (and therefore ASS font styles) for all subtitled files except vobsub, PGS and dvd
+			boolean apply_ass_styling = params.sid.getType() != SubtitleType.VOBSUB &&
+					params.sid.getType() != SubtitleType.PGS &&
+					configuration.isMencoderAss() &&   // GUI: enable subtitles formating
+					!foundNoassParam &&                // GUI: codec specific options
+					!dvd;
+			if (apply_ass_styling) {
 				sb.append("-ass ");
 
-				// GUI: Override ASS subtitles style if requested (always for SRT subtitles)
-				if (
-					!configuration.isMencoderAssDefaultStyle() ||
-					params.sid.getType() == DLNAMediaSubtitle.SUBRIP ||
-					params.sid.getType() == DLNAMediaSubtitle.EMBEDDED
-				) {
+				// GUI: Override ASS subtitles style if requested (always for SRT and TX3G subtitles)
+				boolean override_ass_style = !configuration.isMencoderAssDefaultStyle() ||
+						params.sid.getType() == SubtitleType.SUBRIP ||
+						params.sid.getType() == SubtitleType.TX3G;
+				if (override_ass_style) {
 					String assSubColor = "ffffff00";
 					if (configuration.getSubsColor() != 0) {
 						assSubColor = Integer.toHexString(configuration.getSubsColor());
@@ -1561,7 +1614,7 @@ public class MEncoderVideo extends Player {
 						sb.append(" -ass-force-style FontName=").append(configuration.getMencoderFont()).append(",");
 					} else {
 						String font = CodecUtil.getDefaultFontPath();
-						if (StringUtils.isNotBlank(font)) {
+						if (isNotBlank(font)) {
 							// Variable "font" contains a font path instead of a font name.
 							// Does "-ass-force-style" support font paths? In tests on OSX
 							// the font path is ignored (Outline, Shadow and MarginV are
@@ -1596,8 +1649,8 @@ public class MEncoderVideo extends Player {
 					sb.append("-ass-force-style MarginV=").append(subtitleMargin).append(" ");
 				}
 
-				if (params.sid.getType() != DLNAMediaSubtitle.EMBEDDED) {
-					// Workaround for MPlayer #2041, remove when that bug is fixed
+				// Workaround for MPlayer #2041, remove when that bug is fixed
+				if (!params.sid.isEmbedded()) {
 					sb.append("-noflip-hebrew ");
 				}
 			// use PLAINTEXT formating
@@ -1607,7 +1660,7 @@ public class MEncoderVideo extends Player {
 					sb.append(" -font ").append(configuration.getMencoderFont()).append(" ");
 				} else {
 					String font = CodecUtil.getDefaultFontPath();
-					if (StringUtils.isNotBlank(font)) {
+					if (isNotBlank(font)) {
 						sb.append(" -font ").append(font).append(" ");
 					}
 				}
@@ -1637,170 +1690,162 @@ public class MEncoderVideo extends Player {
 			// Use fontconfig if enabled
 			sb.append("-").append(configuration.isMencoderFontConfig() ? "" : "no").append("fontconfig ");
 
-			// Apply DVD/VOBsub subtitle quality
-			if (params.sid.getType() == DLNAMediaSubtitle.VOBSUB && configuration.getMencoderVobsubSubtitleQuality() != null) {
+			// Apply DVD/VOBSUB subtitle quality
+			if (params.sid.getType() == SubtitleType.VOBSUB && configuration.getMencoderVobsubSubtitleQuality() != null) {
 				String subtitleQuality = configuration.getMencoderVobsubSubtitleQuality();
 
 				sb.append("-spuaa ").append(subtitleQuality).append(" ");
 			}
 
-			if (!params.sid.isFileUtf8() && !configuration.isMencoderDisableSubs() && configuration.getMencoderSubCp() != null && configuration.getMencoderSubCp().length() > 0) {
-				sb.append("-subcp ").append(configuration.getMencoderSubCp()).append(" ");
-				if (configuration.isMencoderSubFribidi()) {
-					sb.append("-fribidi-charset ").append(configuration.getMencoderSubCp()).append(" ");
+			// external subtitles file
+			if (params.sid.isExternal()) {
+				if (!params.sid.isExternalFileUtf()) {
+					String subcp = null;
+					// append -subcp option for non UTF external subtitles
+					if (isNotBlank(configuration.getMencoderSubCp())) {
+						// manual setting
+						subcp = configuration.getMencoderSubCp();
+					} else if (isNotBlank(SubtitleUtils.getSubCpOptionForMencoder(params.sid))) {
+						// autodetect charset (blank mencoder_subcp config option)
+						subcp = SubtitleUtils.getSubCpOptionForMencoder(params.sid);
+					}
+					if (isNotBlank(subcp)) {
+						sb.append("-subcp ").append(subcp).append(" ");
+						if (configuration.isMencoderSubFribidi()) {
+							sb.append("-fribidi-charset ").append(subcp).append(" ");
+						}
+					}
 				}
 			}
 		}
 
 		st = new StringTokenizer(sb.toString(), " ");
-		int oldc = overriddenMainArgs.length;
-		overriddenMainArgs = Arrays.copyOf(overriddenMainArgs, overriddenMainArgs.length + st.countTokens());
-		i = oldc;
-		handleToken = false;
 
-		while (st.hasMoreTokens()) {
-			String s = st.nextToken();
+		{
+			int i = overriddenMainArgs.length; // old length
+			overriddenMainArgs = Arrays.copyOf(overriddenMainArgs, overriddenMainArgs.length + st.countTokens());
+			boolean handleToken = false;
 
-			if (handleToken) {
-				s = "-quiet";
-				handleToken = false;
+			while (st.hasMoreTokens()) {
+				String s = st.nextToken();
+
+				if (handleToken) {
+					s = "-quiet";
+					handleToken = false;
+				}
+
+				if ((!configuration.isMencoderAss() || dvd) && s.contains("-ass")) {
+					s = "-quiet";
+					handleToken = true;
+				}
+
+				overriddenMainArgs[i++] = s;
 			}
-
-			if ((!configuration.isMencoderAss() || dvd) && s.contains("-ass")) {
-				s = "-quiet";
-				handleToken = true;
-			}
-
-			overriddenMainArgs[i++] = s;
 		}
 
-		String cmdArray[] = new String[18 + args().length];
+		List<String> cmdList = new ArrayList<String>();
 
-		cmdArray[0] = executable();
+		cmdList.add(executable());
 
-		// Choose which time to seek to
-		cmdArray[1] = "-ss";
-		if (params.timeseek > 0) {
-			cmdArray[2] = "" + params.timeseek;
-		} else {
-			cmdArray[2] = "0";
-		}
+		// timeseek
+		// XXX -ss 0 is is included for parity with the old (cmdArray) code: it may be possible to omit it
+		cmdList.add("-ss");
+		cmdList.add((params.timeseek > 0) ? "" + params.timeseek : "0");
 
 		if (dvd) {
-			cmdArray[3] = "-dvd-device";
-		} else {
-			cmdArray[3] = "-quiet";
+			cmdList.add("-dvd-device");
 		}
 
+		// input filename
 		if (avisynth && !fileName.toLowerCase().endsWith(".iso")) {
-			File avsFile = FFMpegVideo.getAVSScript(fileName, params.sid, params.fromFrame, params.toFrame);
-			cmdArray[4] = ProcessUtil.getShortFileNameIfWideChars(avsFile.getAbsolutePath());
+			File avsFile = FFMpegAviSynthVideo.getAVSScript(fileName, params.sid, params.fromFrame, params.toFrame);
+			cmdList.add(ProcessUtil.getShortFileNameIfWideChars(avsFile.getAbsolutePath()));
 		} else {
-			cmdArray[4] = fileName;
 			if (params.stdin != null) {
-				cmdArray[4] = "-";
+				cmdList.add("-");
+			} else {
+				cmdList.add(fileName);
 			}
 		}
 
 		if (dvd) {
-			cmdArray[5] = "dvd://" + media.getDvdtrack();
-		} else {
-			cmdArray[5] = "-quiet";
+			cmdList.add("dvd://" + media.getDvdtrack());
 		}
 
-		String arguments[] = args();
-
-		for (i = 0; i < arguments.length; i++) {
-			cmdArray[6 + i] = arguments[i];
-			if (arguments[i].contains("format=mpeg2") && media.getAspect() != null && media.getValidAspect(true) != null) {
-				cmdArray[6 + i] += ":vaspect=" + media.getValidAspect(true);
-			}
-		}
-
-		cmdArray[cmdArray.length - 12] = "-quiet";
-		cmdArray[cmdArray.length - 11] = "-quiet";
-		cmdArray[cmdArray.length - 10] = "-quiet";
-		cmdArray[cmdArray.length - 9] = "-quiet";
-
-		if (!dts && !pcm && !avisynth() && params.aid != null && media.getAudioCodes().size() > 1) {
-			cmdArray[cmdArray.length - 12] = "-aid";
-			boolean lavf = false; // Need to add support for LAVF demuxing
-			cmdArray[cmdArray.length - 11] = "" + (lavf ? params.aid.getId() + 1 : params.aid.getId());
-		}
-
-		/*
-		 * TODO: Move the following block up with the rest of the
-		 * subtitle stuff
-		 */
-		if (subString == null && params.sid != null) {
-			cmdArray[cmdArray.length - 10] = "-sid";
-			cmdArray[cmdArray.length - 9] = "" + params.sid.getId();
-		} else if (subString != null && !avisynth()) { // Trick necessary for MEncoder to skip the internal embedded track ?
-			cmdArray[cmdArray.length - 10] = "-sid";
-			cmdArray[cmdArray.length - 9] = "100";
-		} else if (subString == null) { // Trick necessary for MEncoder to not display the internal embedded track
-			cmdArray[cmdArray.length - 10] = "-subdelay";
-			cmdArray[cmdArray.length - 9] = "20000";
-		}
-
-		cmdArray[cmdArray.length - 8] = "-quiet";
-		cmdArray[cmdArray.length - 7] = "-quiet";
-
-		if (configuration.isMencoderForceFps() && !configuration.isFix25FPSAvMismatch()) {
-			cmdArray[cmdArray.length - 8] = "-fps";
-			cmdArray[cmdArray.length - 7] = "24000/1001";
-		}
-
-		cmdArray[cmdArray.length - 6] = "-ofps";
-		cmdArray[cmdArray.length - 5] = "24000/1001";
-
-		String frameRate = null;
-
-		if (media != null) {
-			frameRate = media.getValidFps(true);
-		}
-
-		if (frameRate != null) {
-			cmdArray[cmdArray.length - 5] = frameRate;
-			if (configuration.isMencoderForceFps()) {
-				if (configuration.isFix25FPSAvMismatch()) {
-					cmdArray[cmdArray.length - 8] = "-mc";
-					cmdArray[cmdArray.length - 7] = "0.005";
-					cmdArray[cmdArray.length - 5] = "25";
-				} else {
-					cmdArray[cmdArray.length - 7] = cmdArray[cmdArray.length - 5];
-				}
-			}
-		}
-
-		/*
-		 * TODO: Move the following block up with the rest of the
-		 * subtitle stuff
-		 */
-		if (subString != null && !configuration.isMencoderDisableSubs() && !avisynth()) {
-			if (params.sid.getType() == DLNAMediaSubtitle.VOBSUB) {
-				cmdArray[cmdArray.length - 4] = "-vobsub";
-				cmdArray[cmdArray.length - 3] = subString.substring(0, subString.length() - 4);
-				cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 2);
-				cmdArray[cmdArray.length - 4] = "-slang";
-				cmdArray[cmdArray.length - 3] = "" + params.sid.getLang();
+		for (String arg : args()) {
+			if (arg.contains("format=mpeg2") && media.getAspect() != null && media.getValidAspect(true) != null) {
+				cmdList.add(arg + ":vaspect=" + media.getValidAspect(true));
 			} else {
-				cmdArray[cmdArray.length - 4] = "-sub";
-				cmdArray[cmdArray.length - 3] = subString.replace(",", "\\,"); // Commas in MEncoder separate multiple subtitle files
-				if (params.sid.isFileUtf8() && params.sid.getPlayableFile() != null) {
-					cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 1);
-					cmdArray[cmdArray.length - 3] = "-utf8";
+				cmdList.add(arg);
+			}
+		}
+
+		if (!dtsRemux && !pcm && !avisynth() && params.aid != null && media.getAudioTracksList().size() > 1) {
+			cmdList.add("-aid");
+			boolean lavf = false; // TODO Need to add support for LAVF demuxing
+			cmdList.add("" + (lavf ? params.aid.getId() + 1 : params.aid.getId()));
+		}
+
+		/*
+		 * TODO: Move the following block up with the rest of the
+		 * subtitle stuff
+		 */
+		if (isBlank(externalSubtitlesFileName) && params.sid != null) {
+			cmdList.add("-sid");
+			cmdList.add("" + params.sid.getId());
+		} else if (isNotBlank(externalSubtitlesFileName) && !avisynth()) { // Trick necessary for MEncoder to skip the internal embedded track ?
+			cmdList.add("-sid");
+			cmdList.add("100");
+		} else if (isBlank(externalSubtitlesFileName)) { // Trick necessary for MEncoder to not display the internal embedded track
+			cmdList.add("-subdelay");
+			cmdList.add("20000");
+		}
+
+		// -ofps
+		String validFramerate = (media != null) ? media.getValidFps(true) : null; // optional input framerate: may be null
+		String framerate = (validFramerate != null) ? validFramerate : "24000/1001"; // where a framerate is required, use the input framerate or 24000/1001
+		String ofps = framerate;
+
+		// optional -fps or -mc
+		if (configuration.isMencoderForceFps()) {
+			if (!configuration.isFix25FPSAvMismatch()) {
+				cmdList.add("-fps");
+				cmdList.add(framerate);
+			} else if (validFramerate != null) { // XXX not sure why this "fix" requires the input to have a valid framerate, but that's the logic in the old (cmdArray) code
+				cmdList.add("-mc");
+				cmdList.add("0.005");
+				ofps = "25";
+			}
+		}
+
+		cmdList.add("-ofps");
+		cmdList.add(ofps);
+
+		/*
+		 * TODO: Move the following block up with the rest of the
+		 * subtitle stuff
+		 */
+		// external subtitles file
+		if (!configuration.isMencoderDisableSubs() && !avisynth() && params.sid != null && params.sid.isExternal()) {
+			if (params.sid.getType() == SubtitleType.VOBSUB) {
+				cmdList.add("-vobsub");
+				cmdList.add(externalSubtitlesFileName.substring(0, externalSubtitlesFileName.length() - 4));
+				cmdList.add("-slang");
+				cmdList.add("" + params.sid.getLang());
+			} else {
+				cmdList.add("-sub");
+				cmdList.add(externalSubtitlesFileName.replace(",", "\\,")); // Commas in MEncoder separate multiple subtitle files
+
+				if (params.sid.isExternalFileUtf()) {
+					// append -utf8 option for UTF-8 external subtitles
+					cmdList.add("-utf8");
 				}
 			}
-		} else {
-			cmdArray[cmdArray.length - 4] = "-quiet";
-			cmdArray[cmdArray.length - 3] = "-quiet";
 		}
 
 		if (fileName.toLowerCase().endsWith(".evo")) {
-			cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 2);
-			cmdArray[cmdArray.length - 4] = "-psprobe";
-			cmdArray[cmdArray.length - 3] = "10000";
+			cmdList.add("-psprobe");
+			cmdList.add("10000");
 		}
 
 		boolean deinterlace = configuration.isMencoderYadif();
@@ -1824,9 +1869,6 @@ public class MEncoderVideo extends Player {
 			StringBuilder vfValueOverscanMiddle  = new StringBuilder();
 			StringBuilder vfValueVS              = new StringBuilder();
 			StringBuilder vfValueComplete        = new StringBuilder();
-
-			cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 2);
-			cmdArray[cmdArray.length - 4] = "-vf";
 
 			String deinterlaceComma = "";
 			int scaleWidth = 0;
@@ -1968,7 +2010,12 @@ public class MEncoderVideo extends Player {
 				deinterlaceComma = ",";
 			}
 
-			cmdArray[cmdArray.length - 3] = (deinterlace ? "yadif" : "") + (scaleBool ? deinterlaceComma + vfValueComplete : "");
+			String vfValue = (deinterlace ? "yadif" : "") + (scaleBool ? deinterlaceComma + vfValueComplete : "");
+
+			if (isNotBlank(vfValue)) {
+				cmdList.add("-vf");
+				cmdList.add(vfValue);
+			}
 		}
 
 		/*
@@ -1988,141 +2035,193 @@ public class MEncoderVideo extends Player {
 			newWidth  = (media.getWidth() / 4) * 4;
 			newHeight = (media.getHeight() / 4) * 4;
 
-			cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 2);
-			cmdArray[cmdArray.length - 4] = "-vf";
-			cmdArray[cmdArray.length - 3] = "softskip,scale=" + newWidth + ":" + newHeight;
+			cmdList.add("-vf");
+			cmdList.add("softskip,scale=" + newWidth + ":" + newHeight);
 		}
 
 		if (configuration.getMencoderMT() && !avisynth && !dvd && !(media.getCodecV() != null && (media.getCodecV().equals("mpeg2video")))) {
-			cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 2);
-			cmdArray[cmdArray.length - 4] = "-lavdopts";
-			cmdArray[cmdArray.length - 3] = "fast";
+			cmdList.add("-lavdopts");
+			cmdList.add("fast");
 		}
 
-		boolean noMC0NoSkip = false;
+		boolean disableMc0AndNoskip = false;
 
+		// Process the options for this file in Transcoding Settings -> Mencoder -> Expert Settings: Codec-specific parameters
+		// TODO this is better handled by a plugin with scripting support and will be removed
 		if (media != null) {
-			String sArgs[] = getSpecificCodecOptions(configuration.getCodecSpecificConfig(), media, params, fileName, subString, configuration.isMencoderIntelligentSync(), false);
-			if (sArgs != null && sArgs.length > 0) {
-				boolean vfConsumed = false;
-				boolean afConsumed = false;
-				for (int s = 0; s < sArgs.length; s++) {
-					if (sArgs[s].equals("-noass")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-ass")) {
-								cmdArray[c] = "-quiet";
-							}
-						}
-					} else if (sArgs[s].equals("-ofps")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-ofps")) {
-								cmdArray[c] = "-quiet";
-								cmdArray[c + 1] = "-quiet";
-								s++;
-							}
-						}
-					} else if (sArgs[s].equals("-fps")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-fps")) {
-								cmdArray[c] = "-quiet";
-								cmdArray[c + 1] = "-quiet";
-								s++;
-							}
-						}
-					} else if (sArgs[s].equals("-ovc")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-ovc")) {
-								cmdArray[c] = "-quiet";
-								cmdArray[c + 1] = "-quiet";
-								s++;
-							}
-						}
-					} else if (sArgs[s].equals("-channels")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-channels")) {
-								cmdArray[c] = "-quiet";
-								cmdArray[c + 1] = "-quiet";
-								s++;
-							}
-						}
-					} else if (sArgs[s].equals("-oac")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-oac")) {
-								cmdArray[c] = "-quiet";
-								cmdArray[c + 1] = "-quiet";
-								s++;
-							}
-						}
-					} else if (sArgs[s].equals("-quality")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-lavcopts")) {
-								cmdArray[c + 1] = "autoaspect=1:vcodec=" + vcodec +
-									":acodec=" + (configuration.isMencoderAc3Fixed() ? "ac3_fixed" : "ac3") +
-									":abitrate=" + CodecUtil.getAC3Bitrate(configuration, params.aid) +
-									":threads=" + configuration.getMencoderMaxThreads() + ":" + sArgs[s + 1];
-								addMaximumBitrateConstraints(cmdArray[c + 1], media, cmdArray[c + 1], params.mediaRenderer, "");
-								sArgs[s + 1] = "-quality";
-								s++;
-							}
-						}
-					} else if (sArgs[s].equals("-mpegopts")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-mpegopts")) {
-								cmdArray[c + 1] += ":" + sArgs[s + 1];
-								sArgs[s + 1] = "-mpegopts";
-								s++;
-							}
-						}
-					} else if (sArgs[s].equals("-vf")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-vf")) {
-								cmdArray[c + 1] += "," + sArgs[s + 1];
-								sArgs[s + 1] = "-vf";
-								s++;
-								vfConsumed = true;
-							}
-						}
-					} else if (sArgs[s].equals("-af")) {
-						for (int c = 0; c < cmdArray.length; c++) {
-							if (cmdArray[c] != null && cmdArray[c].equals("-af")) {
-								cmdArray[c + 1] += "," + sArgs[s + 1];
-								sArgs[s + 1] = "-af";
-								s++;
-								afConsumed = true;
-							}
-						}
-					} else if (sArgs[s].equals("-nosync")) {
-						noMC0NoSkip = true;
-					} else if (sArgs[s].equals("-mc")) {
-						noMC0NoSkip = true;
+			String expertOptions[] = getSpecificCodecOptions(
+				configuration.getCodecSpecificConfig(),
+				media,
+				params,
+				fileName,
+				externalSubtitlesFileName,
+				configuration.isMencoderIntelligentSync(),
+				false
+			);
+
+			// the parameters (expertOptions) are processed in 3 passes
+			// 1) process expertOptions
+			// 2) process cmdList
+			// 3) append expertOptions to cmdList
+
+			if (expertOptions != null && expertOptions.length > 0) {
+				// remove this option (key) from the cmdList in pass 2.
+				// if the boolean value is true, also remove the option's corresponding value
+				Map<String, Boolean> removeCmdListOption = new HashMap<String, Boolean>();
+
+				// if this option (key) is defined in cmdList, merge this string value into the
+				// option's value in pass 2. the value is a string format template into which the
+				// cmdList option value is injected
+				Map<String, String> mergeCmdListOption = new HashMap<String, String>();
+
+				// merges that are performed in pass 2 are logged in this map; the key (string) is
+				// the option name and the value is a boolean indicating whether the option was merged
+				// or not. the map is populated after pass 1 with the options from mergeCmdListOption
+				// and all values initialised to false. if an option was merged, it is not appended
+				// to cmdList
+				Map<String, Boolean> mergedCmdListOption = new HashMap<String, Boolean>();
+
+				// pass 1: process expertOptions
+				for (int i = 0; i < expertOptions.length; ++i) {
+					if (expertOptions[i].equals("-noass")) {
+						// remove -ass from cmdList in pass 2.
+						// -ass won't have been added in this method (getSpecificCodecOptions
+						// has been called multiple times above to check for -noass and -nomux)
+						// but it may have been added via the renderer or global MEncoder options.
+						// XXX: there are currently 10 other -ass options (-ass-color, -ass-border-color &c.).
+						// technically, they should all be removed...
+						removeCmdListOption.put("-ass", false); // false: option does not have a corresponding value
+						// remove -noass from expertOptions in pass 3
+						expertOptions[i] = REMOVE_OPTION;
+					} else if (expertOptions[i].equals("-nomux")) {
+						expertOptions[i] = REMOVE_OPTION;
+					} else if (expertOptions[i].equals("-mt")) {
+						// not an MEncoder option so remove it from exportOptions.
+						// multi-threaded MEncoder is used by default, so this is obsolete (TODO: Remove it from the description)
+						expertOptions[i] = REMOVE_OPTION;
+					} else if (expertOptions[i].equals("-ofps")) {
+						// replace the cmdList version with the expertOptions version i.e. remove the former
+						removeCmdListOption.put("-ofps", true);
+						// skip (i.e. leave unchanged) the exportOptions value
+						++i;
+					} else if (expertOptions[i].equals("-fps")) {
+						removeCmdListOption.put("-fps", true);
+						++i;
+					} else if (expertOptions[i].equals("-ovc")) {
+						removeCmdListOption.put("-ovc", true);
+						++i;
+					} else if (expertOptions[i].equals("-channels")) {
+						removeCmdListOption.put("-channels", true);
+						++i;
+					} else if (expertOptions[i].equals("-oac")) {
+						removeCmdListOption.put("-oac", true);
+						++i;
+					} else if (expertOptions[i].equals("-quality")) {
+						// XXX like the old (cmdArray) code, this clobbers the old -lavcopts value
+						String lavcopts = String.format(
+							"autoaspect=1:vcodec=%s:acodec=%s:abitrate=%s:threads=%d:%s",
+							vcodec,
+							(configuration.isMencoderAc3Fixed() ? "ac3_fixed" : "ac3"),
+							CodecUtil.getAC3Bitrate(configuration, params.aid),
+							configuration.getMencoderMaxThreads(),
+							expertOptions[i + 1]
+						);
+
+						// append bitrate-limiting options if configured
+						lavcopts = addMaximumBitrateConstraints(
+							lavcopts,
+							media,
+							lavcopts,
+							params.mediaRenderer,
+							""
+						);
+
+						// a string format with no placeholders, so the cmdList option value is ignored.
+						// note: we protect "%" from being interpreted as a format by converting it to "%%",
+						// which is then turned back into "%" when the format is processed
+						mergeCmdListOption.put("-lavcopts", lavcopts.replace("%", "%%"));
+						// remove -quality <value>
+						expertOptions[i] = expertOptions[i + 1] = REMOVE_OPTION;
+						++i;
+					} else if (expertOptions[i].equals("-mpegopts")) {
+						mergeCmdListOption.put("-mpegopts", "%s:" + expertOptions[i + 1].replace("%", "%%"));
+						// merge if cmdList already contains -mpegopts, but don't append if it doesn't (parity with the old (cmdArray) version)
+						expertOptions[i] = expertOptions[i + 1] = REMOVE_OPTION;
+						++i;
+					} else if (expertOptions[i].equals("-vf")) {
+						mergeCmdListOption.put("-vf", "%s," + expertOptions[i + 1].replace("%", "%%"));
+						++i;
+					} else if (expertOptions[i].equals("-af")) {
+						mergeCmdListOption.put("-af", "%s," + expertOptions[i + 1].replace("%", "%%"));
+						++i;
+					} else if (expertOptions[i].equals("-nosync")) {
+						disableMc0AndNoskip = true;
+						expertOptions[i] = REMOVE_OPTION;
+					} else if (expertOptions[i].equals("-mc")) {
+						disableMc0AndNoskip = true;
 					}
 				}
-				cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + sArgs.length);
-				for (int s = 0; s < sArgs.length; s++) {
-					if (sArgs[s].equals("-noass") || sArgs[s].equals("-nomux") || sArgs[s].equals("-mpegopts") || (sArgs[s].equals("-vf") & vfConsumed) || (sArgs[s].equals("-af") && afConsumed) || sArgs[s].equals("-quality") || sArgs[s].equals("-nosync") || sArgs[s].equals("-mt")) {
-						cmdArray[cmdArray.length - sArgs.length - 2 + s] = "-quiet";
+
+				for (String key : mergeCmdListOption.keySet()) {
+					mergedCmdListOption.put(key, false);
+				}
+
+				// pass 2: process cmdList
+				List<String> transformedCmdList = new ArrayList<String>();
+
+				for (int i = 0; i < cmdList.size(); ++i) {
+					String option = cmdList.get(i);
+
+					// we remove an option by *not* adding it to transformedCmdList
+					if (removeCmdListOption.containsKey(option)) {
+						if (isTrue(removeCmdListOption.get(option))) { // true: remove (i.e. don't add) the corresponding value
+							++i;
+						}
 					} else {
-						cmdArray[cmdArray.length - sArgs.length - 2 + s] = sArgs[s];
+						transformedCmdList.add(option);
+
+						if (mergeCmdListOption.containsKey(option)) {
+							String format = mergeCmdListOption.get(option);
+							String value = String.format(format, cmdList.get(i + 1));
+							// record the fact that an expertOption value has been merged into this cmdList value
+							mergedCmdListOption.put(option, true);
+							transformedCmdList.add(value);
+							++i;
+						}
+					}
+				}
+
+				cmdList = transformedCmdList;
+
+				// pass 3: append expertOptions to cmdList
+				for (int i = 0; i < expertOptions.length; ++i) {
+					String option = expertOptions[i];
+
+					if (option != REMOVE_OPTION) {
+						if (isTrue(mergedCmdListOption.get(option))) { // true: this option and its value have already been merged into existing cmdList options
+							++i; // skip the value
+						} else {
+							cmdList.add(option);
+						}
 					}
 				}
 			}
 		}
 
-		if ((pcm || dts || mux) || (configuration.isMencoderNoOutOfSync() && !noMC0NoSkip)) {
-			cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 3);
-			cmdArray[cmdArray.length - 5] = "-mc";
-			cmdArray[cmdArray.length - 4] = "0";
-			cmdArray[cmdArray.length - 3] = "-noskip";
+		if ((pcm || dtsRemux || ac3Remux) || (configuration.isMencoderNoOutOfSync() && !disableMc0AndNoskip)) {
 			if (configuration.isFix25FPSAvMismatch()) {
-				cmdArray[cmdArray.length - 4] = "0.005";
-				cmdArray[cmdArray.length - 3] = "-quiet";
+				cmdList.add("-mc");
+				cmdList.add("0.005");
+			} else {
+				cmdList.add("-mc");
+				cmdList.add("0");
+				cmdList.add("-noskip");
 			}
 		}
 
 		if (params.timeend > 0) {
-			cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 2);
-			cmdArray[cmdArray.length - 4] = "-endpos";
-			cmdArray[cmdArray.length - 3] = "" + params.timeend;
+			cmdList.add("-endpos");
+			cmdList.add("" + params.timeend);
 		}
 
 		String rate = "48000";
@@ -2131,52 +2230,52 @@ public class MEncoderVideo extends Player {
 		}
 
 		// force srate -> cause ac3's mencoder doesn't like anything other than 48khz
-		if (media != null && !pcm && !dts && !mux) {
-			cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 4);
-			cmdArray[cmdArray.length - 6] = "-af";
-			cmdArray[cmdArray.length - 5] = "lavcresample=" + rate;
-			cmdArray[cmdArray.length - 4] = "-srate";
-			cmdArray[cmdArray.length - 3] = rate;
+		if (media != null && !pcm && !dtsRemux && !ac3Remux) {
+			cmdList.add("-af");
+			cmdList.add("lavcresample=" + rate);
+			cmdList.add("-srate");
+			cmdList.add(rate);
 		}
 
 		// add a -cache option for piped media (e.g. rar/zip file entries):
 		// https://code.google.com/p/ps3mediaserver/issues/detail?id=911
 		if (params.stdin != null) {
-			cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 2);
-			cmdArray[cmdArray.length - 4] = "-cache";
-			cmdArray[cmdArray.length - 3] = "8192";
+			cmdList.add("-cache");
+			cmdList.add("8192");
 		}
 
 		PipeProcess pipe = null;
 
-		cmdArray[cmdArray.length - 2] = "-o";
-
 		ProcessWrapperImpl pw = null;
 
-		if (pcm || dts || mux) {
+		if (pcm || dtsRemux) {
+			// transcode video, demux audio, remux with tsmuxer
 			boolean channels_filter_present = false;
 
-			for (String s : cmdArray) {
-				if (StringUtils.isNotBlank(s) && s.startsWith("channels")) {
+			for (String s : cmdList) {
+				if (isNotBlank(s) && s.startsWith("channels")) {
 					channels_filter_present = true;
 					break;
 				}
 			}
 
 			if (params.avidemux) {
-				pipe = new PipeProcess("mencoder" + System.currentTimeMillis(), (pcm || dts || mux) ? null : params);
+				pipe = new PipeProcess("mencoder" + System.currentTimeMillis(), (pcm || dtsRemux || ac3Remux) ? null : params);
 				params.input_pipes[0] = pipe;
-				cmdArray[cmdArray.length - 1] = pipe.getInputPipe();
 
-				if (pcm && !channels_filter_present) {
-					String mixer = CodecUtil.getMixerOutput(true, configuration.getAudioChannelCount(), configuration.getAudioChannelCount());
-					if (StringUtils.isNotBlank(mixer)) {
-						cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 2);
-						cmdArray[cmdArray.length - 2] = "-af";
-						cmdArray[cmdArray.length - 1] = mixer;
+				cmdList.add("-o");
+				cmdList.add(pipe.getInputPipe());
+
+				if (pcm && !channels_filter_present && params.aid != null) {
+					String mixer = getLPCMChannelMappingForMencoder(params.aid);
+					if (isNotBlank(mixer)) {
+						cmdList.add("-af");
+						cmdList.add(mixer);
 					}
 				}
 
+				String[] cmdArray = new String[cmdList.size()];
+				cmdList.toArray(cmdArray);
 				pw = new ProcessWrapperImpl(cmdArray, params);
 
 				PipeProcess videoPipe = new PipeProcess("videoPipe" + System.currentTimeMillis(), "out", "reconnect");
@@ -2194,17 +2293,22 @@ public class MEncoderVideo extends Player {
 				audioPipeProcess.runInNewThread();
 				try {
 					Thread.sleep(50);
-				} catch (InterruptedException e) {
-				}
+				} catch (InterruptedException e) { }
 				videoPipe.deleteLater();
 				audioPipe.deleteLater();
 			} else {
-				// remove the -oac switch, otherwise too many video packets errors appears again
+				// remove the -oac switch, otherwise the "too many video packets" errors appear again
+				for (ListIterator<String> it = cmdList.listIterator(); it.hasNext();) { 
+					String option = it.next();
 
-				for (int s = 0; s < cmdArray.length; s++) {
-					if (cmdArray[s].equals("-oac")) {
-						cmdArray[s] = "-nosound";
-						cmdArray[s + 1] = "-nosound";
+					if (option.equals("-oac")) {
+						it.set("-nosound");
+
+						if (it.hasNext()) {
+							it.next();
+							it.remove();
+						}
+
 						break;
 					}
 				}
@@ -2213,16 +2317,20 @@ public class MEncoderVideo extends Player {
 
 				TSMuxerVideo ts = new TSMuxerVideo(configuration);
 				File f = new File(configuration.getTempFolder(), "pms-tsmuxer.meta");
-				String cmd[] = new String[]{ts.executable(), f.getAbsolutePath(), pipe.getInputPipe()};
+				String cmd[] = new String[]{ ts.executable(), f.getAbsolutePath(), pipe.getInputPipe() };
 				pw = new ProcessWrapperImpl(cmd, params);
 
 				PipeIPCProcess ffVideoPipe = new PipeIPCProcess(System.currentTimeMillis() + "ffmpegvideo", System.currentTimeMillis() + "videoout", false, true);
 
-				cmdArray[cmdArray.length - 1] = ffVideoPipe.getInputPipe();
+				cmdList.add("-o");
+				cmdList.add(ffVideoPipe.getInputPipe());
 
 				OutputParams ffparams = new OutputParams(configuration);
 				ffparams.maxBufferSize = 1;
 				ffparams.stdin = params.stdin;
+
+				String[] cmdArray = new String[cmdList.size()];
+				cmdList.toArray(cmdArray);
 				ProcessWrapperImpl ffVideo = new ProcessWrapperImpl(cmdArray, ffparams);
 
 				ProcessWrapper ff_video_pipe_process = ffVideoPipe.getPipeProcess();
@@ -2234,18 +2342,30 @@ public class MEncoderVideo extends Player {
 				ffVideo.runInNewThread();
 
 				String aid = null;
-				if (media != null && media.getAudioCodes().size() > 1 && params.aid != null) {
-					aid = params.aid.getId() + "";
+				if (media != null && media.getAudioTracksList().size() > 1 && params.aid != null) {
+					if (media.getContainer() != null && (media.getContainer().equals(FormatConfiguration.AVI) || media.getContainer().equals(FormatConfiguration.FLV))) {
+						// TODO confirm (MP4s, OGMs and MOVs already tested: first aid is 0; AVIs: first aid is 1)
+						// for AVIs, FLVs ans MOVs mencoder starts audio tracks numbering from 1
+						aid = "" + (params.aid.getId() + 1);
+					} else {
+						// everything else from 0
+						aid = "" + params.aid.getId();
+					}
 				}
 
 				PipeIPCProcess ffAudioPipe = new PipeIPCProcess(System.currentTimeMillis() + "ffmpegaudio01", System.currentTimeMillis() + "audioout", false, true);
 				StreamModifier sm = new StreamModifier();
 				sm.setPcm(pcm);
-				sm.setDtsembed(dts);
-				sm.setNbchannels(sm.isDtsembed() ? 2 : CodecUtil.getRealChannelCount(configuration, params.aid));
+				sm.setDtsembed(dtsRemux);
 				sm.setSampleFrequency(48000);
 				sm.setBitspersample(16);
-				String mixer = CodecUtil.getMixerOutput(!sm.isDtsembed(), sm.getNbchannels(), configuration.getAudioChannelCount());
+
+				String mixer = null;
+				if (pcm && !dtsRemux) {
+					mixer = getLPCMChannelMappingForMencoder(params.aid); // LPCM always outputs 5.1/7.1 for multichannel tracks. Downmix with player if needed!
+				}
+
+				sm.setNbchannels(channels);
 
 				// it seems the -really-quiet prevents mencoder to stop the pipe output after some time...
 				// -mc 0.1 make the DTS-HD extraction works better with latest mencoder builds, and makes no impact on the regular DTS one
@@ -2255,14 +2375,14 @@ public class MEncoderVideo extends Player {
 					fileName,
 					"-really-quiet",
 					"-msglevel", "statusline=2",
-					"-channels", "" + sm.getNbchannels(),
+					"-channels", "" + channels,
 					"-ovc", "copy",
 					"-of", "rawaudio",
-					"-mc", dts ? "0.1" : "0",
+					"-mc", dtsRemux ? "0.1" : "0",
 					"-noskip",
 					(aid == null) ? "-quiet" : "-aid", (aid == null) ? "-quiet" : aid,
-					"-oac", sm.isDtsembed() ? "copy" : "pcm",
-					(StringUtils.isNotBlank(mixer) && !channels_filter_present) ? "-af" : "-quiet", (StringUtils.isNotBlank(mixer) && !channels_filter_present) ? mixer : "-quiet",
+					"-oac", (ac3Remux || dtsRemux) ? "copy" : "pcm",
+					(isNotBlank(mixer) && !channels_filter_present) ? "-af" : "-quiet", (isNotBlank(mixer) && !channels_filter_present) ? mixer : "-quiet",
 					"-srate", "48000",
 					"-o", ffAudioPipe.getInputPipe()
 				};
@@ -2308,17 +2428,33 @@ public class MEncoderVideo extends Player {
 					fps = "fps=" + params.forceFps + ", ";
 				}
 
-				String audioType = "A_LPCM";
-				if (params.mediaRenderer.isMuxDTSToMpeg()) {
-					audioType = "A_DTS";
+				String audioType;
+				if (ac3Remux) {
+					audioType = "A_AC3";
+				} else if (dtsRemux) {
+					if (params.mediaRenderer.isMuxDTSToMpeg()) {
+						//renderer can play proper DTS track
+						audioType = "A_DTS";
+					} else {
+						// DTS padded in LPCM trick
+						audioType = "A_LPCM";
+					}
+				} else {
+					// PCM
+					audioType = "A_LPCM";
 				}
 
-				if (params.lossyaudio) {
-					audioType = "A_AC3";
+
+				// mencoder bug (confirmed with mencoder r35003 + ffmpeg 0.11.1):
+				// audio delay is ignored when playing from file start (-ss 0)
+				// override with tsmuxer.meta setting
+				String timeshift = "";
+				if (mencoderAC3RemuxAudioDelayBug) {
+					timeshift = "timeshift=" + params.aid.getAudioProperties().getAudioDelay() + "ms, ";
 				}
 
 				pwMux.println(videoType + ", \"" + ffVideoPipe.getOutputPipe() + "\", " + fps + "level=4.1, insertSEI, contSPS, track=1");
-				pwMux.println(audioType + ", \"" + ffAudioPipe.getOutputPipe() + "\", track=2");
+				pwMux.println(audioType + ", \"" + ffAudioPipe.getOutputPipe() + "\", " + timeshift + "track=2");
 				pwMux.close();
 
 				ProcessWrapper pipe_process = pipe.getPipeProcess();
@@ -2348,19 +2484,23 @@ public class MEncoderVideo extends Player {
 			}
 		} else {
 			boolean directpipe = Platform.isMac() || Platform.isFreeBSD();
+
 			if (directpipe) {
-				cmdArray = Arrays.copyOf(cmdArray, cmdArray.length + 3);
-				cmdArray[cmdArray.length - 3] = "-really-quiet";
-				cmdArray[cmdArray.length - 2] = "-msglevel";
-				cmdArray[cmdArray.length - 1] = "statusline=2";
-				cmdArray[cmdArray.length - 4] = "-";
+				cmdList.add("-o");
+				cmdList.add("-");
+				cmdList.add("-really-quiet");
+				cmdList.add("-msglevel");
+				cmdList.add("statusline=2");
 				params.input_pipes = new PipeProcess[2];
 			} else {
-				pipe = new PipeProcess("mencoder" + System.currentTimeMillis(), (pcm || dts || mux) ? null : params);
+				pipe = new PipeProcess("mencoder" + System.currentTimeMillis(), (pcm || dtsRemux) ? null : params);
 				params.input_pipes[0] = pipe;
-				cmdArray[cmdArray.length - 1] = pipe.getInputPipe();
+				cmdList.add("-o");
+				cmdList.add(pipe.getInputPipe());
 			}
 
+			String[] cmdArray = new String[cmdList.size()];
+			cmdList.toArray(cmdArray);
 			cmdArray = finalizeTranscoderArgs(
 				this,
 				fileName,
@@ -2409,7 +2549,15 @@ public class MEncoderVideo extends Player {
 		return Format.VIDEO;
 	}
 
-	private String[] getSpecificCodecOptions(String codecParam, DLNAMediaInfo media, OutputParams params, String filename, String srtFileName, boolean enable, boolean verifyOnly) {
+	private String[] getSpecificCodecOptions(
+		String codecParam,
+		DLNAMediaInfo media,
+		OutputParams params,
+		String filename,
+		String externalSubtitlesFileName,
+		boolean enable,
+		boolean verifyOnly
+	) {
 		StringBuilder sb = new StringBuilder();
 		String codecs = enable ? DEFAULT_CODEC_CONF_SCRIPT : "";
 		codecs += "\n" + codecParam;
@@ -2456,7 +2604,7 @@ public class MEncoderVideo extends Player {
 			interpreter.set("filename", filename);
 			interpreter.set("audio", params.aid != null);
 			interpreter.set("subtitles", params.sid != null);
-			interpreter.set("srtfile", srtFileName);
+			interpreter.set("srtfile", externalSubtitlesFileName);
 
 			if (params.aid != null) {
 				interpreter.set("samplerate", params.aid.getSampleRate());
@@ -2475,7 +2623,7 @@ public class MEncoderVideo extends Player {
 			interpreter.set("duration", media.getDurationInSeconds());
 
 			if (params.aid != null) {
-				interpreter.set("channels", params.aid.getNrAudioChannels());
+				interpreter.set("channels", params.aid.getAudioProperties().getNumberOfChannels());
 			}
 
 			interpreter.set("height", media.getHeight());
@@ -2501,7 +2649,7 @@ public class MEncoderVideo extends Player {
 
 								Object result = interpreter.eval(key);
 
-								if (result != null && result instanceof Boolean && ((Boolean) result).booleanValue()) {
+								if (result != null && result instanceof Boolean && (Boolean) result) {
 									sb.append(" ");
 									sb.append(value);
 								}
@@ -2538,5 +2686,29 @@ public class MEncoderVideo extends Player {
 		args.toArray(definitiveArgs);
 
 		return definitiveArgs;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean isCompatible(DLNAResource resource) {
+		if (resource == null || resource.getFormat().getType() != Format.VIDEO) {
+			return false;
+		}
+
+		Format format = resource.getFormat();
+
+		if (format != null) {
+			Format.Identifier id = format.getIdentifier();
+
+			if (id.equals(Format.Identifier.ISO)
+					|| id.equals(Format.Identifier.MKV)
+					|| id.equals(Format.Identifier.MPG)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

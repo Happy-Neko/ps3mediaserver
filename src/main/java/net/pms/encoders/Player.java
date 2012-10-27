@@ -18,6 +18,15 @@
  */
 package net.pms.encoders;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.StringTokenizer;
+
+import javax.swing.JComponent;
+
 import net.pms.configuration.PmsConfiguration;
 import net.pms.configuration.RendererConfiguration;
 import net.pms.dlna.DLNAMediaAudio;
@@ -32,16 +41,9 @@ import net.pms.io.OutputParams;
 import net.pms.io.ProcessWrapper;
 import net.pms.util.FileUtil;
 import net.pms.util.Iso639;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.swing.*;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.StringTokenizer;
 
 public abstract class Player {
 	private static final Logger logger = LoggerFactory.getLogger(Player.class);
@@ -58,7 +60,13 @@ public abstract class Player {
 	public abstract String id();
 	public abstract String name();
 	public abstract int type();
+
+	// FIXME this is an implementation detail (and not a very good one).
+	// it's entirely up to engines how they construct their command lines.
+	// need to get rid of this
+	@Deprecated
 	public abstract String[] args();
+
 	public abstract String mimeType();
 	public abstract String executable();
 	private static List<FinalizeTranscoderArgsListener> finalizeTranscodeArgsListeners =
@@ -124,23 +132,37 @@ public abstract class Player {
 			for (FinalizeTranscoderArgsListener listener : finalizeTranscodeArgsListeners) {
 				try {
 					cmdList = listener.finalizeTranscoderArgs(
-							player,
-							filename,
-							dlna,
-							media,
-							params,
-							cmdList);
+						player,
+						filename,
+						dlna,
+						media,
+						params,
+						cmdList
+					);
 				} catch (Throwable t) {
 					logger.error(String.format("Failed to call finalizeTranscoderArgs on listener of type=%s", listener.getClass()), t);
 				}
 			}
 
-			String[] cmdArray = new String[cmdList.size()];
+			String[] cmdArray = new String[ cmdList.size() ];
 			cmdList.toArray(cmdArray);
 			return cmdArray;
 		}
 	}
 
+	/**
+	 * This method populates the output parameters with the correct audio track
+	 * and subtitles, based on the given filename, media info and configuration.
+	 * 
+	 * @param fileName
+	 *            The file name used to determine the availability of subtitles.
+	 * @param media
+	 *            The MediaInfo details on the file.
+	 * @param params
+	 *            The parameters to populate.
+	 * @param configuration
+	 *            The PMS configuration settings.
+	 */
 	public void setAudioAndSubs(String fileName, DLNAMediaInfo media, OutputParams params, PmsConfiguration configuration) {
 		if (params.aid == null && media != null) {
 			// check for preferred audio
@@ -149,7 +171,7 @@ public abstract class Player {
 				String lang = st.nextToken();
 				lang = lang.trim();
 				logger.trace("Looking for an audio track with lang: " + lang);
-				for (DLNAMediaAudio audio : media.getAudioCodes()) {
+				for (DLNAMediaAudio audio : media.getAudioTracksList()) {
 					if (audio.matchCode(lang)) {
 						params.aid = audio;
 						logger.trace("Matched audio track: " + audio);
@@ -160,9 +182,9 @@ public abstract class Player {
 			}
 		}
 
-		if (params.aid == null && media.getAudioCodes().size() > 0) {
+		if (params.aid == null && media.getAudioTracksList().size() > 0) {
 			// take a default audio track, dts first if possible
-			for (DLNAMediaAudio audio : media.getAudioCodes()) {
+			for (DLNAMediaAudio audio : media.getAudioTracksList()) {
 				if (audio.isDTS()) {
 					params.aid = audio;
 					logger.trace("Found priority audio track with DTS: " + audio);
@@ -171,7 +193,7 @@ public abstract class Player {
 			}
 
 			if (params.aid == null) {
-				params.aid = media.getAudioCodes().get(0);
+				params.aid = media.getAudioTracksList().get(0);
 				logger.trace("Choosed a default audio track: " + params.aid);
 			}
 		}
@@ -205,7 +227,7 @@ public abstract class Player {
 						matchedSub = new DLNAMediaSubtitle();
 						matchedSub.setLang("off");
 					} else {
-						for (DLNAMediaSubtitle present_sub : media.getSubtitlesCodes()) {
+						for (DLNAMediaSubtitle present_sub : media.getSubtitleTracksList()) {
 							if (present_sub.matchCode(sub) || sub.equals("*")) {
 								matchedSub = present_sub;
 								logger.trace(" Found a match: " + matchedSub);
@@ -237,7 +259,7 @@ public abstract class Player {
 			if (configuration.getUseSubtitles()) {
 				boolean forcedSubsFound = false;
 				// Priority to external subtitles
-				for (DLNAMediaSubtitle sub : media.getSubtitlesCodes()) {
+				for (DLNAMediaSubtitle sub : media.getSubtitleTracksList()) {
 					if (matchedSub !=null && matchedSub.getLang() !=null && matchedSub.getLang().equals("off")) {
 						StringTokenizer st = new StringTokenizer(configuration.getMencoderForcedSubTags(), ",");
 
@@ -251,8 +273,8 @@ public abstract class Player {
 								logger.trace("Forcing preferred subtitles : " + sub.getLang() + "/" + sub.getFlavor());
 								logger.trace("Forced subtitles track : " + sub);
 
-								if (sub.getFile() != null) {
-									logger.trace("Found external forced file : " + sub.getFile().getAbsolutePath());
+								if (sub.getExternalFile() != null) {
+									logger.trace("Found external forced file : " + sub.getExternalFile().getAbsolutePath());
 								}
 								params.sid = sub;
 								forcedSubsFound = true;
@@ -264,8 +286,8 @@ public abstract class Player {
 						}
 					} else {
 							logger.trace("Found subtitles track: " + sub);
-							if (sub.getFile() != null) {
-								logger.trace("Found external file: " + sub.getFile().getAbsolutePath());
+							if (sub.getExternalFile() != null) {
+								logger.trace("Found external file: " + sub.getExternalFile().getAbsolutePath());
 								params.sid = sub;
 								break;
 							}
@@ -286,7 +308,7 @@ public abstract class Player {
 					String lang = st.nextToken();
 					lang = lang.trim();
 					logger.trace("Looking for a subtitle track with lang: " + lang);
-					for (DLNAMediaSubtitle sub : media.getSubtitlesCodes()) {
+					for (DLNAMediaSubtitle sub : media.getSubtitleTracksList()) {
 						if (sub.matchCode(lang)) {
 							params.sid = sub;
 							logger.trace("Matched sub track: " + params.sid);
@@ -298,4 +320,16 @@ public abstract class Player {
 			}
 		}
 	}
+
+	/**
+	 * Returns whether or not the player can handle a given resource.
+	 * If the resource is <code>null</code> compatibility cannot be
+	 * determined and <code>false</code> will be returned.
+	 * 
+	 * @param resource
+	 *            The {@link DLNAResource} to be matched.
+	 * @return True when the resource can be handled, false otherwise.
+	 * @since 1.60.0
+	 */
+	public abstract boolean isCompatible(DLNAResource resource);
 }

@@ -112,7 +112,8 @@ public class FFMpegDVRMSRemux extends Player {
 		String fileName,
 		DLNAResource dlna,
 		DLNAMediaInfo media,
-		OutputParams params) throws IOException {
+		OutputParams params
+	) throws IOException {
 		PmsConfiguration configuration = PMS.getConfiguration();
 		String ffmpegAlternativePath = configuration.getFfmpegAlternativePath();
 		List<String> cmdList = new ArrayList<String>();
@@ -130,10 +131,6 @@ public class FFMpegDVRMSRemux extends Player {
 
 		cmdList.add("-i");
 		cmdList.add(fileName);
-
-		// change this to -metadata title=dummy if this can be made to work with an official ffmpeg build
-		cmdList.add("-title");
-		cmdList.add("dummy");
 
 		for (String arg : args()) {
 			cmdList.add(arg);
@@ -205,5 +202,27 @@ public class FFMpegDVRMSRemux extends Player {
 	@Override
 	public boolean isPlayerCompatible(RendererConfiguration mediaRenderer) {
 		return mediaRenderer.isTranscodeToMPEGPSAC3();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean isCompatible(DLNAResource resource) {
+		if (resource == null || resource.getFormat().getType() != Format.VIDEO) {
+			return false;
+		}
+
+		Format format = resource.getFormat();
+
+		if (format != null) {
+			Format.Identifier id = format.getIdentifier();
+
+			if (id.equals(Format.Identifier.DVRMS)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

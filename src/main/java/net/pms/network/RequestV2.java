@@ -18,6 +18,21 @@
  */
 package net.pms.network;
 
+import static org.apache.commons.lang.StringUtils.isNotBlank;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.MalformedURLException;
+import java.net.Socket;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
+
 import net.pms.PMS;
 import net.pms.configuration.RendererConfiguration;
 import net.pms.dlna.DLNAMediaInfo;
@@ -25,7 +40,7 @@ import net.pms.dlna.DLNAMediaSubtitle;
 import net.pms.dlna.DLNAResource;
 import net.pms.dlna.Range;
 import net.pms.external.StartStopListenerDelegate;
-import org.apache.commons.lang.StringUtils;
+
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelFuture;
@@ -36,13 +51,6 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.stream.ChunkedStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.text.SimpleDateFormat;
-import java.util.*;
 
 /**
  * This class handles all forms of incoming HTTP requests by constructing a proper HTTP response. 
@@ -290,12 +298,12 @@ public class RequestV2 extends HTTPResource {
 					// This is a request for a subtitle file
 					output.setHeader(HttpHeaders.Names.CONTENT_TYPE, "text/plain");
 					output.setHeader(HttpHeaders.Names.EXPIRES, getFUTUREDATE() + " GMT");
-					List<DLNAMediaSubtitle> subs = dlna.getMedia().getSubtitlesCodes();
+					List<DLNAMediaSubtitle> subs = dlna.getMedia().getSubtitleTracksList();
 
 					if (subs != null && !subs.isEmpty()) {
 						// TODO: maybe loop subs to get the requested subtitle type instead of using the first one
 						DLNAMediaSubtitle sub = subs.get(0);
-						inputStream = new java.io.FileInputStream(sub.getFile());
+						inputStream = new java.io.FileInputStream(sub.getExternalFile());
 					}
 				} else {
 					// This is a request for a regular file.
@@ -320,20 +328,22 @@ public class RequestV2 extends HTTPResource {
 
 					if (subtitleHttpHeader != null && !"".equals(subtitleHttpHeader)) {
 						// Device allows a custom subtitle HTTP header; construct it
-						List<DLNAMediaSubtitle> subs = dlna.getMedia().getSubtitlesCodes();
+						List<DLNAMediaSubtitle> subs = dlna.getMedia().getSubtitleTracksList();
 
 						if (subs != null && !subs.isEmpty()) {
 							DLNAMediaSubtitle sub = subs.get(0);
-
-							int type = sub.getType();
-
-							if (type < DLNAMediaSubtitle.subExtensions.length) {
-								String strType = DLNAMediaSubtitle.subExtensions[type - 1];
-								String subtitleUrl = "http://" + PMS.get().getServer().getHost()
+							String subtitleUrl;
+							String subExtension = sub.getType().getExtension();
+							if (isNotBlank(subExtension)) {
+								subtitleUrl = "http://" + PMS.get().getServer().getHost()
 										+ ':' + PMS.get().getServer().getPort() + "/get/"
-										+ id + "/subtitle0000." + strType;
-								output.setHeader(subtitleHttpHeader, subtitleUrl);
+										+ id + "/subtitle0000." + subExtension;
+							} else {
+								subtitleUrl = "http://" + PMS.get().getServer().getHost()
+										+ ':' + PMS.get().getServer().getPort() + "/get/"
+										+ id + "/subtitle0000";
 							}
+							output.setHeader(subtitleHttpHeader, subtitleUrl);
 						}
 					}
 
@@ -355,11 +365,11 @@ public class RequestV2 extends HTTPResource {
 
 						final DLNAMediaInfo media = dlna.getMedia();
 						if (media != null) {
-							if (StringUtils.isNotBlank(media.getContainer())) {
+							if (isNotBlank(media.getContainer())) {
 								name += " [container: " + media.getContainer() + "]";
 							}
 
-							if (StringUtils.isNotBlank(media.getCodecV())) {
+							if (isNotBlank(media.getCodecV())) {
 								name += " [video: " + media.getCodecV() + "]";
 							}
 						}
@@ -692,25 +702,32 @@ public class RequestV2 extends HTTPResource {
 			output.setHeader("SID", PMS.get().usn());
 			output.setHeader("TIMEOUT", "Second-1800");
 			String cb = soapaction.replace("<", "").replace(">", "");
-			String faddr = cb.replace("http://", "").replace("/", "");
-			String addr = faddr.split(":")[0];
-			int port = Integer.parseInt(faddr.split(":")[1]);
-			Socket sock = new Socket(addr,port);
-			OutputStream out = sock.getOutputStream();
-			out.write(("NOTIFY /" + argument + " HTTP/1.1").getBytes());
-			out.write(CRLF.getBytes());
-			out.write(("SID: " + PMS.get().usn()).getBytes());
-			out.write(CRLF.getBytes());
-			out.write(("SEQ: " + 0).getBytes());
-			out.write(CRLF.getBytes());
-			out.write(("NT: upnp:event").getBytes());
-			out.write(CRLF.getBytes());
-			out.write(("NTS: upnp:propchange").getBytes());
-			out.write(CRLF.getBytes());
-			out.write(("HOST: " + faddr).getBytes());
-			out.write(CRLF.getBytes());
-			out.flush();
-			out.close();
+
+			try {
+				URL soapActionUrl = new URL(cb);
+				String addr = soapActionUrl.getHost();
+				int port = soapActionUrl.getPort();
+				Socket sock = new Socket(addr,port);
+				OutputStream out = sock.getOutputStream();
+
+				out.write(("NOTIFY /" + argument + " HTTP/1.1").getBytes());
+				out.write(CRLF.getBytes());
+				out.write(("SID: " + PMS.get().usn()).getBytes());
+				out.write(CRLF.getBytes());
+				out.write(("SEQ: " + 0).getBytes());
+				out.write(CRLF.getBytes());
+				out.write(("NT: upnp:event").getBytes());
+				out.write(CRLF.getBytes());
+				out.write(("NTS: upnp:propchange").getBytes());
+				out.write(CRLF.getBytes());
+				out.write(("HOST: " + addr + ":" + port).getBytes());
+				out.write(CRLF.getBytes());
+				out.flush();
+				out.close();
+			} catch (MalformedURLException ex) {
+				LOGGER.debug("Cannot parse address and port from soap action \"" + soapaction + "\"", ex);
+			}
+
 			if (argument.contains("connection_manager")) {
 				response.append(HTTPXMLHelper.eventHeader("urn:schemas-upnp-org:service:ConnectionManager:1"));
 				response.append(HTTPXMLHelper.eventProp("SinkProtocolInfo"));

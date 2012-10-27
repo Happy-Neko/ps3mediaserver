@@ -24,6 +24,14 @@ import net.pms.encoders.*;
 import java.util.ArrayList;
 
 public class MPG extends Format {
+	/**
+	 * {@inheritDoc} 
+	 */
+	@Override
+	public Identifier getIdentifier() {
+		return Identifier.MPG;
+	}
+
 	@Override
 	public ArrayList<Class<? extends Player>> getProfiles() {
 		PMS r = PMS.get();
@@ -40,8 +48,10 @@ public class MPG extends Format {
 				a.add(MEncoderVideo.class);
 			} else if (engine.equals(MEncoderAviSynth.ID) && PMS.get().getRegistry().isAvis()) {
 				a.add(MEncoderAviSynth.class);
-			} else if (engine.equals(FFMpegVideo.ID) && PMS.get().getRegistry().isAvis()) {
+			} else if (engine.equals(FFMpegVideo.ID)) {
 				a.add(FFMpegVideo.class);
+			} else if (engine.equals(FFMpegAviSynthVideo.ID) && PMS.get().getRegistry().isAvis()) {
+				a.add(FFMpegAviSynthVideo.class);
 			} else if (engine.equals(TSMuxerVideo.ID)/* && PMS.get().isWindows()*/) {
 				a.add(TSMuxerVideo.class);
 			}

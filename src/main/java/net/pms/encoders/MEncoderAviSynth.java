@@ -25,6 +25,8 @@ import com.jgoodies.forms.layout.FormLayout;
 import net.pms.Messages;
 import net.pms.PMS;
 import net.pms.configuration.PmsConfiguration;
+import net.pms.dlna.DLNAResource;
+import net.pms.formats.Format;
 
 import javax.swing.*;
 import java.awt.*;
@@ -136,6 +138,29 @@ public class MEncoderAviSynth extends MEncoderVideo {
 
 	@Override
 	public String name() {
-		return "Avisynth/MEncoder";
+		return "AviSynth/MEncoder";
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public boolean isCompatible(DLNAResource resource) {
+		if (resource == null || resource.getFormat().getType() != Format.VIDEO) {
+			return false;
+		}
+
+		Format format = resource.getFormat();
+
+		if (format != null) {
+			Format.Identifier id = format.getIdentifier();
+
+			if (id.equals(Format.Identifier.MKV)
+					|| id.equals(Format.Identifier.MPG)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
