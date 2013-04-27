@@ -1,6 +1,17 @@
 Changelog:
 ==========
 
+1.82.0 - 2013-??-??
+
+    Engines:
+        MEncoder:
+            - Fixed bug that caused embedded subtitles to be displayed instead of external
+        tsMuxeR:
+            - Fixed 24-bit FLAC support with tsMuxeR
+
+    Misc:
+        - Fix issue with VirtualBox and PMS launchers (thanks, thepadawan42)
+
 1.81.0 - 2013-04-21
 
     Engines:

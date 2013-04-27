@@ -29,7 +29,7 @@ import org.apache.commons.configuration.ConversionException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.configuration.event.ConfigurationListener;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1803,11 +1803,11 @@ public class PmsConfiguration {
 	 * and typically exclude the number at the end of the interface name.
 	 * <p>
 	 * Default is to skip the interfaces created by Virtualbox, OpenVPN and
-	 * Parallels: "tap,vmnet,vnic".
+	 * Parallels: "tap,vmnet,vnic,virtualbox".
 	 * @return The string of network interface names to skip.
 	 */
 	public List<String> getSkipNetworkInterfaces() {
-		return getStringList(KEY_SKIP_NETWORK_INTERFACES, "tap,vmnet,vnic");
+		return getStringList(KEY_SKIP_NETWORK_INTERFACES, "tap,vmnet,vnic,virtualbox");
 	}
 
 	public void setSkipLoopFilterEnabled(boolean value) {
@@ -1859,13 +1859,35 @@ public class PmsConfiguration {
 	}
 
 	public List<String> getEnginesAsList(SystemUtils registry) {
+		String defaultEngines = StringUtils.join(
+			new String[] {
+				"mencoder",
+				"avsmencoder",
+				"tsmuxer",
+				"ffmpegvideo",
+				"vlctranscoder",
+				"ffmpegaudio",
+				"mplayeraudio",
+				"tsmuxeraudio",
+				"ffmpegwebvideo",
+				"vlcvideo",
+				"mencoderwebvideo",
+				"mplayervideodump",
+				"mplayerwebaudio",
+				"vlcaudio",
+				"ffmpegdvrmsremux",
+				"rawthumbs"
+			},
+			","
+		);
+
 		List<String> engines = stringToList(
-			// an empty string means: disable all engines
+			// possibly blank: an empty string means: disable all engines
 			// http://www.ps3mediaserver.org/forum/viewtopic.php?f=6&t=15416
 			ConfigurationUtil.getPossiblyBlankConfigurationString(
 				configuration,
 				KEY_ENGINES,
-				"mencoder,avsmencoder,tsmuxer,ffmpegvideo,vlctranscoder,ffmpegaudio,mplayeraudio,tsmuxeraudio,ffmpegwebvideo,vlcvideo,mencoderwebvideo,mplayervideodump,mplayerwebaudio,vlcaudio,ffmpegdvrmsremux,rawthumbs"
+				defaultEngines
 			)
 		);
 
