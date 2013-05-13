@@ -23,7 +23,6 @@ import com.sun.jna.Platform;
 import net.pms.PMS;
 import net.pms.configuration.PmsConfiguration;
 import net.pms.dlna.DLNAResource;
-import net.pms.formats.Format;
 import net.pms.formats.FormatFactory;
 import net.pms.io.SystemUtils;
 import org.slf4j.Logger;
@@ -224,33 +223,6 @@ public final class PlayerFactory {
 	}
 
 	/**
-	 * @deprecated Use {@link #getPlayer(DLNAResource)} instead.
-	 *
-	 * Returns the player that matches the given class and format.
-	 * 
-	 * @param profileClass
-	 *            The class to match.
-	 * @param ext
-	 *            The format to match.
-	 * @return The player if a match could be found, <code>null</code>
-	 *         otherwise.
-	 */
-	@Deprecated
-	public static Player getPlayer(final Class<? extends Player> profileClass,
-			final Format ext) {
-
-		for (Player player : players) {
-			if (player.getClass().equals(profileClass)
-					&& player.type() == ext.getType()
-					&& !player.excludeFormat(ext)) {
-				return player;
-			}
-		}
-
-		return null;
-	}
-
-	/**
 	 * Returns the first {@link Player} that matches the given mediaInfo or
 	 * format. Each of the available players is passed the provided information
 	 * and the first that reports it is compatible will be returned.
@@ -277,35 +249,6 @@ public final class PlayerFactory {
 		}
 
 		return null;
-	}
-
-	/**
-	 * @deprecated Use {@link #getPlayer(DLNAResource)} instead. 
-	 *
-	 * Returns the players matching the given classes and type.
-	 * 
-	 * @param profileClasses
-	 *            The classes to match.
-	 * @param type
-	 *            The type to match.
-	 * @return The list of players that match. If no players match, an empty
-	 *         list is returned.
-	 */
-	@Deprecated
-	public static ArrayList<Player> getPlayers(
-			final ArrayList<Class<? extends Player>> profileClasses,
-			final int type) {
-
-		ArrayList<Player> compatiblePlayers = new ArrayList<Player>();
-
-		for (Player player : players) {
-			if (profileClasses.contains(player.getClass())
-					&& player.type() == type) {
-				compatiblePlayers.add(player);
-			}
-		}
-
-		return compatiblePlayers;
 	}
 
 	/**
