@@ -114,13 +114,6 @@ public class FFmpegAudio extends FFmpegVideo {
 	}
 
 	@Override
-	@Deprecated
-	public String[] args() {
-		// unused: kept for backwards compatibility
-		return new String[] { "-f", "s16be", "-ar", "48000" };
-	}
-
-	@Override
 	public String mimeType() {
 		return HTTPResource.AUDIO_TRANSCODE;
 	}

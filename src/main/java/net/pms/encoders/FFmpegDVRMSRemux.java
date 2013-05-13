@@ -80,7 +80,7 @@ public class FFmpegDVRMSRemux extends Player {
 	}
 
 	@Deprecated
-	protected String[] getDefaultArgs() {
+	private String[] getDefaultArgs() {
 		return new String[] {
 			"-vcodec", "copy",
 			"-acodec", "copy",
@@ -91,13 +91,6 @@ public class FFmpegDVRMSRemux extends Player {
 			"-f", "vob",
 			"-copyts"
 		};
-	}
-
-	@Override
-	@Deprecated
-	public String[] args() {
-		return getDefaultArgs();
-
 	}
 
 	@Override
@@ -146,7 +139,7 @@ public class FFmpegDVRMSRemux extends Player {
 		cmdList.add("-i");
 		cmdList.add(filename);
 
-		for (String arg : args()) {
+		for (String arg : getDefaultArgs()) {
 			cmdList.add(arg);
 		}
 

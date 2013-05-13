@@ -52,11 +52,6 @@ public class VideoLanVideoStreaming extends Player {
 	}
 
 	@Override
-	public String[] args() {
-		return new String[]{};
-	}
-
-	@Override
 	public String name() {
 		return "VLC Video Streaming";
 	}

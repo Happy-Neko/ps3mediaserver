@@ -67,11 +67,6 @@ public class MPlayerAudio extends Player {
 	}
 
 	@Override
-	public String[] args() {
-		return new String[]{};
-	}
-
-	@Override
 	public String executable() {
 		return PMS.getConfiguration().getMplayerPath();
 	}

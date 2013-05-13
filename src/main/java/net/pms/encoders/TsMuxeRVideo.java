@@ -92,11 +92,6 @@ public class TsMuxeRVideo extends Player {
 	}
 
 	@Override
-	public String[] args() {
-		return null;
-	}
-
-	@Override
 	public String executable() {
 		return configuration.getTsmuxerPath();
 	}

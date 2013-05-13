@@ -59,7 +59,7 @@ public class MEncoderWebVideo extends Player {
 		return "video/mpeg";
 	}
 
-	protected String[] getDefaultArgs() {
+	private String[] getDefaultArgs() {
 		int nThreads = configuration.getMencoderMaxThreads();
 		String acodec = configuration.isMencoderAc3Fixed() ? "ac3_fixed" : "ac3";
 		return new String[]{
@@ -93,12 +93,12 @@ public class MEncoderWebVideo extends Player {
 		PipeProcess pipe = new PipeProcess("mencoder" + System.currentTimeMillis());
 		params.input_pipes[0] = pipe;
 
-		String cmdArray[] = new String[args().length + 4];
+		String cmdArray[] = new String[getDefaultArgs().length + 4];
 		cmdArray[0] = executable();
 		cmdArray[1] = fileName;
 
-		for (int i = 0; i < args().length; i++) {
-			cmdArray[i + 2] = args()[i];
+		for (int i = 0; i < getDefaultArgs().length; i++) {
+			cmdArray[i + 2] = getDefaultArgs()[i];
 		}
 
 		cmdArray[cmdArray.length - 2] = "-o";
@@ -141,11 +141,6 @@ public class MEncoderWebVideo extends Player {
 	@Override
 	public String name() {
 		return "MEncoder Web";
-	}
-
-	@Override
-	public String[] args() {
-		return getDefaultArgs();
 	}
 
 	@Override

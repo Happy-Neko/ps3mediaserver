@@ -18,16 +18,6 @@ import java.io.InputStream;
 public class RAWThumbnailer extends Player {
 	public final static String ID = "rawthumbs";
 
-	protected String[] getDefaultArgs() {
-		return new String[]{"-e", "-c"};
-	}
-
-	@Override
-	public String[] args() {
-		return getDefaultArgs();
-
-	}
-
 	@Override
 	public JComponent config() {
 		return null;

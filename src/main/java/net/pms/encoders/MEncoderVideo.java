@@ -557,7 +557,7 @@ public class MEncoderVideo extends Player {
 		return true;
 	}
 
-	protected String[] getDefaultArgs() {
+	private String[] getDefaultArgs() {
 		List<String> defaultArgsList = new ArrayList<String>();
 
 		defaultArgsList.add("-msglevel");
@@ -627,8 +627,8 @@ public class MEncoderVideo extends Player {
 		return sanitized.toArray(new String[sanitized.size()]);
 	}
 
-	@Override
-	public String[] args() {
+	@Deprecated
+	private String[] args() {
 		String args[];
 		String defaultArgs[] = getDefaultArgs();
 

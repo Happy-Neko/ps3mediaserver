@@ -61,11 +61,6 @@ public abstract class Player {
 
 	public abstract int type();
 
-	// FIXME this is an implementation detail (and not a very good one).
-	// it's entirely up to engines how they construct their command lines.
-	// need to get rid of this
-	@Deprecated
-	public abstract String[] args();
 
 	public abstract String mimeType();
 	public boolean isNative() {
@@ -128,25 +123,6 @@ public abstract class Player {
 	@Override
 	public String toString() {
 		return name();
-	}
-
-	// no need to pass Player as a parameter: it's the invocant
-	@Deprecated
-	protected String[] finalizeTranscoderArgs(
-		Player player,
-		String filename,
-		DLNAResource dlna,
-		DLNAMediaInfo media,
-		OutputParams params,
-		String[] cmdArgs
-	) {
-		return finalizeTranscoderArgs(
-			filename,
-			dlna,
-			media,
-			params,
-			cmdArgs
-		);
 	}
 
 	protected String[] finalizeTranscoderArgs(

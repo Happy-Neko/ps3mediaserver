@@ -497,20 +497,6 @@ public class FFmpegVideo extends Player {
 		return Format.VIDEO;
 	}
 
-	// unused; return this array for backwards-compatibility
-	@Deprecated
-	protected String[] getDefaultArgs() {
-		List<String> defaultArgsList = new ArrayList<String>();
-
-		defaultArgsList.add("-loglevel");
-		defaultArgsList.add("warning");
-
-		String[] defaultArgsArray = new String[defaultArgsList.size()];
-		defaultArgsList.toArray(defaultArgsArray);
-
-		return defaultArgsArray;
-	}
-
 	private int[] getVideoBitrateConfig(String bitrate) {
 		int bitrates[] = new int[2];
 
@@ -529,12 +515,6 @@ public class FFmpegVideo extends Player {
 		bitrates[0] = (int) Double.parseDouble(bitrate);
 
 		return bitrates;
-	}
-
-	@Override
-	@Deprecated
-	public String[] args() {
-		return getDefaultArgs(); // unused; return this array for for backwards compatibility
 	}
 
 	// XXX hardwired to false and not referenced anywhere else in the codebase

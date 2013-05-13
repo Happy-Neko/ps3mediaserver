@@ -92,11 +92,6 @@ public class VLCVideo extends Player {
 	}
 
 	@Override
-	public String[] args() {
-		return new String[]{};
-	}
-
-	@Override
 	public String name() {
 		return "VLC";
 	}
