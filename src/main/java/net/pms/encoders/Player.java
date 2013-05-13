@@ -46,27 +46,20 @@ import java.util.StringTokenizer;
 public abstract class Player {
 	private static final Logger logger = LoggerFactory.getLogger(Player.class);
 
-	/**
-	 * @deprecated use {@link #getPurpose()} instead.
-	 */
-	@Deprecated
-	public final int purpose() {
-		return getPurpose().getId();
-	}
 
 	public abstract PlayerPurpose getPurpose();
 	public abstract JComponent config();
 	public abstract String id();
 	public abstract String name();
-
 	public abstract int type();
-
-
 	public abstract String mimeType();
+
 	public boolean isNative() {
 		return false;
 	}
+
 	public abstract String executable();
+
 	private static List<FinalizeTranscoderArgsListener> finalizeTranscoderArgsListeners =
 		new ArrayList<FinalizeTranscoderArgsListener>();
 
