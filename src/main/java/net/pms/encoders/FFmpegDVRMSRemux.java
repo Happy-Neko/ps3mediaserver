@@ -74,11 +74,6 @@ public class FFmpegDVRMSRemux extends Player {
 		return "FFmpeg DVR-MS Remux";
 	}
 
-	@Override
-	public int type() {
-		return Format.VIDEO;
-	}
-
 	@Deprecated
 	private String[] getDefaultArgs() {
 		return new String[] {

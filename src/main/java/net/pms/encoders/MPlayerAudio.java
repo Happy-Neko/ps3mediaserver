@@ -180,11 +180,6 @@ public class MPlayerAudio extends Player {
 	}
 
 	@Override
-	public int type() {
-		return Format.AUDIO;
-	}
-
-	@Override
 	public JComponent config() {
 		FormLayout layout = new FormLayout(
 			"left:pref, 0:grow",

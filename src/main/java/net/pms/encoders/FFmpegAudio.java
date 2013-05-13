@@ -109,11 +109,6 @@ public class FFmpegAudio extends FFmpegVideo {
 	}
 
 	@Override
-	public int type() {
-		return Format.AUDIO;
-	}
-
-	@Override
 	public String mimeType() {
 		return HTTPResource.AUDIO_TRANSCODE;
 	}

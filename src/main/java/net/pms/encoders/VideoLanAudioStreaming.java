@@ -45,11 +45,6 @@ public class VideoLanAudioStreaming extends VideoLanVideoStreaming {
 	}
 
 	@Override
-	public int type() {
-		return Format.AUDIO;
-	}
-
-	@Override
 	public String mimeType() {
 		return "audio/wav";
 	}

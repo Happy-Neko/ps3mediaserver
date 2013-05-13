@@ -77,11 +77,6 @@ public class RAWThumbnailer extends Player {
 		return PlayerPurpose.MISC_PLAYER;
 	}
 
-	@Override
-	public int type() {
-		return Format.IMAGE;
-	}
-
 	public static byte[] getThumbnail(OutputParams params, String fileName) throws Exception {
 		params.log = false;
 

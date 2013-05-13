@@ -26,7 +26,6 @@ import net.pms.configuration.PmsConfiguration;
 import net.pms.configuration.RendererConfiguration;
 import net.pms.dlna.DLNAMediaInfo;
 import net.pms.dlna.DLNAResource;
-import net.pms.formats.Format;
 import net.pms.io.OutputParams;
 import net.pms.io.PipeProcess;
 import net.pms.io.ProcessWrapper;
@@ -94,11 +93,6 @@ public class VLCVideo extends Player {
 	@Override
 	public String name() {
 		return "VLC";
-	}
-
-	@Override
-	public int type() {
-		return Format.VIDEO;
 	}
 
 	@Override

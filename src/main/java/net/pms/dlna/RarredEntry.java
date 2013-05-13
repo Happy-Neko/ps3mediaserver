@@ -63,7 +63,7 @@ public class RarredEntry extends DLNAResource implements IPushOutput {
 	}
 
 	public long length() {
-		if (getPlayer() != null && getPlayer().type() != Format.IMAGE) {
+		if (getPlayer() != null && !getPlayer().isImagePlayer()) {
 			return DLNAMediaInfo.TRANS_SIZE;
 		}
 

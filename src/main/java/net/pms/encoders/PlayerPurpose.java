@@ -18,6 +18,9 @@
  */
 package net.pms.encoders;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 public enum PlayerPurpose {
 	VIDEO_FILE_PLAYER(0),
 	AUDIO_FILE_PLAYER(1),
@@ -27,11 +30,28 @@ public enum PlayerPurpose {
 
 	private final int id;
 
+	private final static Set<PlayerPurpose> videoPlayerPurposes = EnumSet.of(VIDEO_FILE_PLAYER, VIDEO_WEB_STREAM_PLAYER);
+	private final static Set<PlayerPurpose> audioPlayerPurposes = EnumSet.of(AUDIO_FILE_PLAYER, AUDIO_WEB_STREAM_PLAYER);
+	private final static Set<PlayerPurpose> imagePlayerPurposes = EnumSet.of(MISC_PLAYER);
+
+
 	PlayerPurpose(int id) {
 		this.id = id;
 	}
 
 	public int getId() {
 		return id;
+	}
+
+	public boolean isVideoPlayer() {
+		return videoPlayerPurposes.contains(this);
+	}
+
+	public boolean isAudioPlayer() {
+		return audioPlayerPurposes.contains(this);
+	}
+
+	public boolean isImagePlayer() {
+		return imagePlayerPurposes.contains(this);
 	}
 }

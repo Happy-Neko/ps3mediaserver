@@ -51,7 +51,28 @@ public abstract class Player {
 	public abstract JComponent config();
 	public abstract String id();
 	public abstract String name();
-	public abstract int type();
+
+	/**
+	 * @return {@code true} if this Player is capable of playing video streams.
+	 */
+	public final boolean isVideoPlayer() {
+		return getPurpose().isVideoPlayer();
+	}
+
+	/**
+	 * @return {@code true} if this Player is capable of playing audio streams.
+	 */
+	public final boolean isAudioPlayer() {
+		return getPurpose().isAudioPlayer();
+	}
+
+	/**
+	 * @return {@code true} if this Player is capable of playing images.
+	 */
+	public final boolean isImagePlayer() {
+		return getPurpose().isImagePlayer();
+	}
+
 	public abstract String mimeType();
 
 	public boolean isNative() {

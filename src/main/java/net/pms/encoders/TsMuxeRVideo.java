@@ -783,10 +783,6 @@ public class TsMuxeRVideo extends Player {
 		return "tsMuxeR";
 	}
 
-	@Override
-	public int type() {
-		return Format.VIDEO;
-	}
 	private JCheckBox tsmuxerforcefps;
 	private JCheckBox muxallaudiotracks;
 

@@ -255,7 +255,7 @@ public class FFmpegVideo extends Player {
 			} else if (isDtsRemux()) {
 				// Audio is added in a separate process later
 				transcodeOptions.add("-an");
-			} else if (type() == Format.AUDIO) {
+			} else if (isAudioPlayer()) {
 				// Skip
 			} else {
 				transcodeOptions.add("-c:a");
@@ -492,11 +492,6 @@ public class FFmpegVideo extends Player {
 		return "FFmpeg";
 	}
 
-	@Override
-	public int type() {
-		return Format.VIDEO;
-	}
-
 	private int[] getVideoBitrateConfig(String bitrate) {
 		int bitrates[] = new int[2];
 
@@ -699,7 +694,7 @@ public class FFmpegVideo extends Player {
 		}
 
 		// Set audio bitrate and channel count only when doing audio transcoding
-		if (!isAc3Remux() && !isDtsRemux() && !(type() == Format.AUDIO)) {
+		if (!isAc3Remux() && !isDtsRemux() && !isAudioPlayer()) {
 			int channels;
 			if (renderer.isTranscodeToWMV() && !renderer.isXBOX()) {
 				channels = 2;

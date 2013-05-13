@@ -57,11 +57,6 @@ public class VideoLanVideoStreaming extends Player {
 	}
 
 	@Override
-	public int type() {
-		return Format.VIDEO;
-	}
-
-	@Override
 	public String mimeType() {
 		return "video/mpeg";
 	}

@@ -103,11 +103,6 @@ public class MPlayerWebVideoDump extends MPlayerAudio {
 	}
 
 	@Override
-	public int type() {
-		return Format.VIDEO;
-	}
-
-	@Override
 	public boolean isTimeSeekable() {
 		return false;
 	}

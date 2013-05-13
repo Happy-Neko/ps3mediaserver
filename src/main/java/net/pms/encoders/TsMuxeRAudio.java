@@ -71,11 +71,6 @@ public class TsMuxeRAudio extends TsMuxeRVideo {
 		return PlayerPurpose.AUDIO_FILE_PLAYER;
 	}
 
-	@Override
-	public int type() {
-		return Format.VIDEO;
-	}
-
 	/**
 	 * {@inheritDoc}
 	 */

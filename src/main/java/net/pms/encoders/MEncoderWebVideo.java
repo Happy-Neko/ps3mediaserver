@@ -148,11 +148,6 @@ public class MEncoderWebVideo extends Player {
 		return configuration.getMencoderPath();
 	}
 
-	@Override
-	public int type() {
-		return Format.VIDEO;
-	}
-
 	/**
 	 * {@inheritDoc}
 	 */

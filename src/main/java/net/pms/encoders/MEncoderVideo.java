@@ -2110,11 +2110,6 @@ public class MEncoderVideo extends Player {
 		return "MEncoder";
 	}
 
-	@Override
-	public int type() {
-		return Format.VIDEO;
-	}
-
 	private String[] getSpecificCodecOptions(
 		String codecParam,
 		DLNAMediaInfo media,
