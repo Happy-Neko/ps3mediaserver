@@ -72,8 +72,6 @@ public class PmsConfiguration {
 	private static final String KEY_AUDIO_THUMBNAIL_METHOD = "audio_thumbnail_method";
 	private static final String KEY_AUTO_UPDATE = "auto_update";
 	private static final String KEY_AUTOLOAD_SUBTITLES = "autoload_external_subtitles";
-	private static final String KEY_AVISYNTH_CONVERT_FPS = "avisynth_convert_fps";
-	private static final String KEY_AVISYNTH_SCRIPT = "avisynth_script";
 	private static final String KEY_ASS_MARGIN = "subtitle_ass_margin";
 	private static final String KEY_ASS_OUTLINE = "subtitle_ass_outline";
 	private static final String KEY_ASS_SCALE = "subtitle_ass_scale";
@@ -1476,45 +1474,6 @@ public class PmsConfiguration {
 	 */
 	public void setUseCache(boolean value) {
 		configuration.setProperty(KEY_USE_CACHE, value);
-	}
-
-	/**
-	 * Set to true if PMS should pass the flag "convertfps=true" to AviSynth.
-	 *
-	 * @param value True if PMS should pass the flag.
-	 */
-	public void setAvisynthConvertFps(boolean value) {
-		configuration.setProperty(KEY_AVISYNTH_CONVERT_FPS, value);
-	}
-
-	/**
-	 * Returns true if PMS should pass the flag "convertfps=true" to AviSynth.
-	 *
-	 * @return True if PMS should pass the flag.
-	 */
-	public boolean getAvisynthConvertFps() {
-		return getBoolean(KEY_AVISYNTH_CONVERT_FPS, false);
-	}
-
-	/**
-	 * Returns the template for the AviSynth script. The script string can
-	 * contain the character "\u0001", which should be treated as the newline
-	 * separator character.
-	 *
-	 * @return The AviSynth script template.
-	 */
-	public String getAvisynthScript() {
-		return getString(KEY_AVISYNTH_SCRIPT, DEFAULT_AVI_SYNTH_SCRIPT);
-	}
-
-	/**
-	 * Sets the template for the AviSynth script. The script string may contain
-	 * the character "\u0001", which will be treated as newline character.
-	 *
-	 * @param value The AviSynth script template.
-	 */
-	public void setAvisynthScript(String value) {
-		configuration.setProperty(KEY_AVISYNTH_SCRIPT, value);
 	}
 
 	/**
