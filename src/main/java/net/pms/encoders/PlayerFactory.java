@@ -117,10 +117,6 @@ public final class PlayerFactory {
 	private static void registerPlayers(final PmsConfiguration configuration) {
 		FFmpegProtocols ffmpegProtocols = new FFmpegProtocols(configuration);
 
-		if (Platform.isWindows()) {
-			registerPlayer(new FFmpegAviSynthVideo(configuration));
-		}
-
 		registerPlayer(new FFmpegAudio(configuration));
 		registerPlayer(new MEncoderVideo(configuration));
 		registerPlayer(new FFmpegVideo(configuration));

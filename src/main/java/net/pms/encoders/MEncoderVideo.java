@@ -20,13 +20,11 @@ package net.pms.encoders;
 
 import bsh.EvalError;
 import bsh.Interpreter;
-
 import com.jgoodies.forms.builder.PanelBuilder;
 import com.jgoodies.forms.factories.Borders;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import com.sun.jna.Platform;
-
 import net.pms.Messages;
 import net.pms.PMS;
 import net.pms.configuration.FormatConfiguration;
@@ -41,15 +39,9 @@ import net.pms.formats.v2.SubtitleType;
 import net.pms.formats.v2.SubtitleUtils;
 import net.pms.io.*;
 import net.pms.network.HTTPResource;
-import net.pms.util.CodecUtil;
-import net.pms.util.FileUtil;
-import net.pms.util.FormLayoutUtil;
-import net.pms.util.PlayerUtil;
-import net.pms.util.ProcessUtil;
-
+import net.pms.util.*;
 import org.apache.commons.configuration.event.ConfigurationEvent;
 import org.apache.commons.configuration.event.ConfigurationListener;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -764,8 +756,6 @@ public class MEncoderVideo extends Player {
 	) throws IOException {
 		params.manageFastStart();
 
-		boolean avisynth = avisynth();
-
 		final String filename = dlna.getSystemName();
 		setAudioAndSubs(filename, media, params, configuration);
 		String externalSubtitlesFileName = null;
@@ -1289,15 +1279,10 @@ public class MEncoderVideo extends Player {
 		}
 
 		// input filename
-		if (avisynth && !filename.toLowerCase().endsWith(".iso")) {
-			File avsFile = FFmpegAviSynthVideo.getAVSScript(filename, params.sid, params.fromFrame, params.toFrame);
-			cmdList.add(ProcessUtil.getShortFileNameIfWideChars(avsFile.getAbsolutePath()));
+		if (params.stdin != null) {
+			cmdList.add("-");
 		} else {
-			if (params.stdin != null) {
-				cmdList.add("-");
-			} else {
-				cmdList.add(filename);
-			}
+			cmdList.add(filename);
 		}
 
 		if (dvd) {
@@ -1601,7 +1586,7 @@ public class MEncoderVideo extends Player {
 			cmdList.add("softskip,expand=" + newWidth + ":" + newHeight);
 		}
 
-		if (configuration.getMencoderMT() && !avisynth && !dvd && !(startsWith(media.getCodecV(), "mpeg2"))) {
+		if (configuration.getMencoderMT() && !dvd && !(startsWith(media.getCodecV(), "mpeg2"))) {
 			cmdList.add("-lavdopts");
 			cmdList.add("fast");
 		}
