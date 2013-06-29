@@ -31,8 +31,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -106,11 +104,6 @@ public class GenericSystemUtils implements SystemUtils {
 		} catch (URISyntaxException e) {
 			logger.trace("Unable to open the given URI: " + uri + ".");
 		}
-	}
-
-	@Override
-	public boolean isNetworkInterfaceLoopback(NetworkInterface ni) throws SocketException {
-		return ni.isLoopback();
 	}
 
 	@Override

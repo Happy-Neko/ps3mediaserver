@@ -4,8 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 
 public class NativeMacSystemUtils extends GenericSystemUtils {
 	private final static Logger logger = LoggerFactory.getLogger(NativeMacSystemUtils.class);
@@ -19,10 +17,5 @@ public class NativeMacSystemUtils extends GenericSystemUtils {
 		} catch (IOException e) {
 			logger.trace("Unable to open the given URI: {}", uri);
 		}
-	}
-
-	@Override
-	public boolean isNetworkInterfaceLoopback(NetworkInterface ni) throws SocketException {
-		return false;
 	}
 }

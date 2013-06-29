@@ -3,8 +3,6 @@ package net.pms.util.platform;
 import net.pms.newgui.LooksFrame;
 
 import java.io.File;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 
 public interface SystemUtils {
 	/**
@@ -43,8 +41,6 @@ public interface SystemUtils {
 	 * @param uri URI string to open externally.
 	 */
 	public void browseURI(String uri);
-
-	public boolean isNetworkInterfaceLoopback(NetworkInterface ni) throws SocketException;
 
 	public void addSystemTray(final LooksFrame frame);
 
