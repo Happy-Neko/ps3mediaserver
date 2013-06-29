@@ -123,11 +123,6 @@ public final class PlayerFactory {
 
 		registerPlayer(new FFmpegAudio(configuration));
 		registerPlayer(new MEncoderVideo(configuration));
-
-		if (Platform.isWindows()) {
-			registerPlayer(new MEncoderAviSynth(configuration));
-		}
-
 		registerPlayer(new FFmpegVideo(configuration));
 		registerPlayer(new VLCVideo(configuration));
 		registerPlayer(new FFmpegWebVideo(configuration, ffmpegProtocols));

@@ -1717,7 +1717,6 @@ public class PmsConfiguration {
 		final String defaultEngines = join(
 			asList(
 				"mencoder",
-				"avsmencoder",
 				"tsmuxer",
 				"ffmpegvideo",
 				"vlctranscoder", // (VLCVideo) TODO: rename "vlcvideo"
