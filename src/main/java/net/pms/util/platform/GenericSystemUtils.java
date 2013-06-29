@@ -58,7 +58,7 @@ public class GenericSystemUtils implements SystemUtils {
 	}
 
 	@Override
-	public String getShortPathNameW(String longPathName) {
+	public String getShortPathName(String longPathName) {
 		return longPathName;
 	}
 

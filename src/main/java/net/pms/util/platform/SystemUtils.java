@@ -17,7 +17,12 @@ public interface SystemUtils {
 	 */
 	public abstract void enableOSSleepMode();
 
-	public abstract String getShortPathNameW(String longPathName);
+	/**
+	 * Returns short file path (8.3 DOS format on Windows platform) if relevant.
+	 * @param longPathName path to file.
+	 * @return short path if relevant of unchanged {@code longPathName}.
+	 */
+	public abstract String getShortPathName(String longPathName);
 
 	public abstract String getWindowsDirectory();
 

@@ -93,12 +93,9 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 		}
 	}
 
-	/* (non-Javadoc)
-	 * @see net.pms.util.platform.SystemUtils#getShortPathNameW(java.lang.String)
-	 */
 	@Override
-	public String getShortPathNameW(String longPathName) {
-		boolean unicodeChars = false;
+	public String getShortPathName(String longPathName) {
+		boolean unicodeChars;
 		try {
 			byte b1[] = longPathName.getBytes("UTF-8");
 			byte b2[] = longPathName.getBytes("cp1252");
@@ -109,16 +106,16 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 
 		if (unicodeChars) {
 			try {
-				WString pathname = new WString(longPathName);
+				final WString pathName = new WString(longPathName);
 
-				char test[] = new char[2 + pathname.length() * 2];
-				int r = Kernel32.INSTANCE.GetShortPathNameW(pathname, test, test.length);
+				char test[] = new char[2 + pathName.length() * 2];
+				int r = Kernel32.INSTANCE.GetShortPathNameW(pathName, test, test.length);
 				if (r > 0) {
-					logger.debug("Forcing short path name on " + pathname);
+					logger.debug("Forcing short path name on " + pathName);
 					return Native.toString(test);
 				} else {
-					logger.info("File does not exist? " + pathname);
-					return null;
+					logger.info("File does not exist? " + pathName);
+					return longPathName;
 				}
 
 			} catch (Exception e) {
@@ -128,9 +125,6 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 		return longPathName;
 	}
 
-	/* (non-Javadoc)
-	 * @see net.pms.util.platform.SystemUtils#getWindowsDirectory()
-	 */
 	@Override
 	public String getWindowsDirectory() {
 		char test[] = new char[2 + 256 * 2];
