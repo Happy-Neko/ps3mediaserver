@@ -59,7 +59,6 @@ public class OutputParams {
 	public boolean hidebuffer;
 	public byte header[];
 	public IPushOutput stdin;
-	public boolean avidemux;
 	public boolean shift_scr;
 
 	public OutputParams(PmsConfiguration configuration) {
@@ -99,7 +98,7 @@ public class OutputParams {
 
 	@Override
 	public String toString() {
-		return "OutputParams [aid=" + aid + ", avidemux=" + avidemux + ", forceFps=" + forceFps + ", forceType="
+		return "OutputParams [aid=" + aid + ", forceFps=" + forceFps + ", forceType="
 			+ forceType + ", fromFrame=" + fromFrame + ", header=" + Arrays.toString(header) + ", hidebuffer="
 			+ hidebuffer + ", input_pipes=" + Arrays.toString(input_pipes) + ", log=" + log + ", losslessaudio="
 			+ losslessaudio + ", lossyaudio=" + lossyaudio + ", maxBufferSize=" + maxBufferSize

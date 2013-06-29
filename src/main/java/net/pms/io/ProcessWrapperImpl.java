@@ -18,13 +18,11 @@
  */
 package net.pms.io;
 
+import com.sun.jna.Platform;
 import net.pms.PMS;
-import net.pms.encoders.AviDemuxerInputStream;
 import net.pms.util.ProcessUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.sun.jna.Platform;
 
 import java.io.File;
 import java.io.IOException;
@@ -195,11 +193,6 @@ public class ProcessWrapperImpl extends Thread implements ProcessWrapper {
 
 				if (bo == null || params.losslessaudio || params.lossyaudio || params.no_videoencode) {
 					InputStream is = params.input_pipes[0].getInputStream();
-
-					if (params.avidemux) {
-						is = new AviDemuxerInputStream(is, params, attachedProcesses);
-					}
-
 					stdoutConsumer = new OutputBufferConsumer(is, params);
 					bo = stdoutConsumer.getBuffer();
 				}
