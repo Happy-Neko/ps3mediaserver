@@ -21,7 +21,7 @@ package net.pms.network;
 import net.pms.PMS;
 import net.pms.io.OutputParams;
 import net.pms.io.ProcessWrapperImpl;
-import net.pms.io.SystemUtils;
+import net.pms.util.platform.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

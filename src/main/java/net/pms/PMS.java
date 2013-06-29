@@ -32,7 +32,9 @@ import net.pms.external.ExternalFactory;
 import net.pms.external.ExternalListener;
 import net.pms.formats.Format;
 import net.pms.formats.FormatFactory;
-import net.pms.io.*;
+import net.pms.io.OutputParams;
+import net.pms.io.OutputTextConsumer;
+import net.pms.io.ProcessWrapperImpl;
 import net.pms.logging.FrameAppender;
 import net.pms.logging.LoggingConfigFileLoader;
 import net.pms.network.HTTPServer;
@@ -44,6 +46,7 @@ import net.pms.newgui.LooksFrame;
 import net.pms.newgui.ProfileChooser;
 import net.pms.update.AutoUpdater;
 import net.pms.util.*;
+import net.pms.util.platform.*;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.event.ConfigurationEvent;
 import org.apache.commons.configuration.event.ConfigurationListener;
@@ -195,12 +198,12 @@ public class PMS {
 
 	/**
 	 * Interface to Windows-specific functions, like Windows Registry. registry is set by {@link #init()}.
-	 * @see net.pms.io.WinUtils
+	 * @see net.pms.util.platform.NativeWindowsUtils
 	 */
 	private SystemUtils registry;
 
 	/**
-	 * @see net.pms.io.WinUtils
+	 * @see net.pms.util.platform.NativeWindowsUtils
 	 */
 	public SystemUtils getRegistry() {
 		return registry;
@@ -631,13 +634,13 @@ public class PMS {
 
 	private SystemUtils createSystemUtils() {
 		if (Platform.isWindows()) {
-			return new WinUtils();
+			return new NativeWindowsUtils();
 		} else {
 			if (Platform.isMac()) {
-				return new MacSystemUtils();
+				return new NativeMacSystemUtils();
 			} else {
 				if (Platform.isSolaris()) {
-					return new SolarisUtils();
+					return new NativeSolarisUtils();
 				} else {
 					return new BasicSystemUtils();
 				}

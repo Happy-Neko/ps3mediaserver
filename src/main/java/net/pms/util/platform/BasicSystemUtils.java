@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package net.pms.io;
+package net.pms.util.platform;
 
 import com.sun.jna.Platform;
 import net.pms.Messages;
@@ -86,7 +86,7 @@ public class BasicSystemUtils implements SystemUtils {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see net.pms.io.SystemUtils#getVlcp()
+	 * @see net.pms.util.platform.SystemUtils#getVlcp()
 	 */
 	@Override
 	public String getVlcPath() {
@@ -96,7 +96,7 @@ public class BasicSystemUtils implements SystemUtils {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see net.pms.io.SystemUtils#getVlcv()
+	 * @see net.pms.util.platform.SystemUtils#getVlcv()
 	 */
 	@Override
 	public String getVlcVersion() {
@@ -106,7 +106,7 @@ public class BasicSystemUtils implements SystemUtils {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see net.pms.io.SystemUtils#isAvis()
+	 * @see net.pms.util.platform.SystemUtils#isAvis()
 	 */
 	@Override
 	public boolean isAvis() {

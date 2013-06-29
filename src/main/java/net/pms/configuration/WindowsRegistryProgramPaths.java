@@ -1,7 +1,7 @@
 package net.pms.configuration;
 
 import net.pms.PMS;
-import net.pms.io.SystemUtils;
+import net.pms.util.platform.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

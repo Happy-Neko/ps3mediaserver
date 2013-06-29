@@ -1,22 +1,21 @@
-package net.pms.io;
+package net.pms.util.platform;
 
 import org.apache.commons.io.IOUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class MacSystemUtils extends BasicSystemUtils {
-	private final static Logger logger = LoggerFactory.getLogger(MacSystemUtils.class);
+public class NativeMacSystemUtils extends BasicSystemUtils {
+	private final static Logger logger = LoggerFactory.getLogger(NativeMacSystemUtils.class);
 
-	public MacSystemUtils() { }
+	public NativeMacSystemUtils() { }
 
 	@Override
 	public void browseURI(String uri) {

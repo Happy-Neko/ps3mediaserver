@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package net.pms.io;
+package net.pms.util.platform;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -37,8 +37,8 @@ import java.util.prefs.Preferences;
  * @author zsombor
  *
  */
-public class WinUtils extends BasicSystemUtils implements SystemUtils {
-	private static final Logger logger = LoggerFactory.getLogger(WinUtils.class);
+public class NativeWindowsUtils extends BasicSystemUtils implements SystemUtils {
+	private static final Logger logger = LoggerFactory.getLogger(NativeWindowsUtils.class);
 	private static final PmsConfiguration configuration = PMS.getConfiguration();
 
 	public interface Kernel32 extends Library {
@@ -73,7 +73,7 @@ public class WinUtils extends BasicSystemUtils implements SystemUtils {
 	public long lastGoToSleepCall = 0;
 
 	/* (non-Javadoc)
-	 * @see net.pms.io.SystemUtils#disableGoToSleep()
+	 * @see net.pms.util.platform.SystemUtils#disableGoToSleep()
 	 */
 	@Override
 	public void disableGoToSleep() {
@@ -86,7 +86,7 @@ public class WinUtils extends BasicSystemUtils implements SystemUtils {
 	}
 
 	/* (non-Javadoc)
-	 * @see net.pms.io.SystemUtils#reenableGoToSleep()
+	 * @see net.pms.util.platform.SystemUtils#reenableGoToSleep()
 	 */
 	@Override
 	public void reenableGoToSleep() {
@@ -99,7 +99,7 @@ public class WinUtils extends BasicSystemUtils implements SystemUtils {
 	}
 
 	/* (non-Javadoc)
-	 * @see net.pms.io.SystemUtils#getAvsPluginsDir()
+	 * @see net.pms.util.platform.SystemUtils#getAvsPluginsDir()
 	 */
 	@Override
 	public File getAvsPluginsDir() {
@@ -114,7 +114,7 @@ public class WinUtils extends BasicSystemUtils implements SystemUtils {
 	}
 
 	/* (non-Javadoc)
-	 * @see net.pms.io.SystemUtils#getShortPathNameW(java.lang.String)
+	 * @see net.pms.util.platform.SystemUtils#getShortPathNameW(java.lang.String)
 	 */
 	@Override
 	public String getShortPathNameW(String longPathName) {
@@ -149,7 +149,7 @@ public class WinUtils extends BasicSystemUtils implements SystemUtils {
 	}
 
 	/* (non-Javadoc)
-	 * @see net.pms.io.SystemUtils#getWindowsDirectory()
+	 * @see net.pms.util.platform.SystemUtils#getWindowsDirectory()
 	 */
 	@Override
 	public String getWindowsDirectory() {
@@ -162,7 +162,7 @@ public class WinUtils extends BasicSystemUtils implements SystemUtils {
 	}
 
 	/* (non-Javadoc)
-	 * @see net.pms.io.SystemUtils#getDiskLabel(java.io.File)
+	 * @see net.pms.util.platform.SystemUtils#getDiskLabel(java.io.File)
 	 */
 	@Override
 	public String getDiskLabel(File f) {
@@ -213,7 +213,7 @@ public class WinUtils extends BasicSystemUtils implements SystemUtils {
 		return new String(chars, 0, i);
 	}
 
-	public WinUtils() {
+	public NativeWindowsUtils() {
 		start();
 	}
 
@@ -277,7 +277,7 @@ public class WinUtils extends BasicSystemUtils implements SystemUtils {
 	}
 
 	/* (non-Javadoc)
-	 * @see net.pms.io.SystemUtils#isKerioFirewall()
+	 * @see net.pms.util.platform.SystemUtils#isKerioFirewall()
 	 */
 	@Override
 	public boolean isKerioFirewall() {
