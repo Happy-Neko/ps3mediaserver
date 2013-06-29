@@ -42,7 +42,7 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 	private static final PmsConfiguration configuration = PMS.getConfiguration();
 
 	private static final int KEY_READ = 0x20019;
-	private boolean isKerioFirewallInstalled = false;
+	private static boolean isKerioFirewallInstalled = false;
 
 	private static final AtomicLong disableOSSleepModeCallTime = new AtomicLong(0);
 	private static final AtomicLong enableOSSleepModeCallTime = new AtomicLong(0);
