@@ -49,17 +49,6 @@ public interface SystemUtils {
 	public void addSystemTray(final LooksFrame frame);
 
 	/**
-	 * Fetch the hardware address for a network interface.
-	 * 
-	 * @param ni Interface to fetch the mac address for
-	 * @return the mac address as bytes, or null if it couldn't be fetched.
-	 * @throws SocketException
-	 *             This won't happen on Mac OS, since the NetworkInterface is
-	 *             only used to get a name.
-	 */
-	public byte[] getHardwareAddress(NetworkInterface ni) throws SocketException;
-
-	/**
 	 * Return the platform specific ping command for the given host address,
 	 * ping count and packet size.
 	 *

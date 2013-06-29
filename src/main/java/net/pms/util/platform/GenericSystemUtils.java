@@ -158,20 +158,6 @@ public class GenericSystemUtils implements SystemUtils {
 	}
 
 	/**
-	 * Fetch the hardware address for a network interface.
-	 * 
-	 * @param ni Interface to fetch the mac address for
-	 * @return the mac address as bytes, or null if it couldn't be fetched.
-	 * @throws SocketException
-	 *             This won't happen on Mac OS, since the NetworkInterface is
-	 *             only used to get a name.
-	 */
-	@Override
-	public byte[] getHardwareAddress(NetworkInterface ni) throws SocketException {
-		return ni.getHardwareAddress();
-	}
-
-	/**
 	 * Return the platform specific ping command for the given host address,
 	 * ping count and packet size.
 	 *
