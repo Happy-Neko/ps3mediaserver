@@ -559,7 +559,7 @@ public class MEncoderVideo extends Player {
 		defaultArgsList.add((ac3Remux || dtsRemux) ? "copy" : (pcm ? "pcm" : "lavc"));
 
 		defaultArgsList.add("-of");
-		defaultArgsList.add((wmv || mpegts) ? "lavf" : ((pcm && avisynth()) ? "avi" : ((pcm || dtsRemux) ? "rawvideo" : "mpeg")));
+		defaultArgsList.add((wmv || mpegts) ? "lavf" : ((pcm || dtsRemux) ? "rawvideo" : "mpeg"));
 
 		if (wmv) {
 			defaultArgsList.add("-lavfopts");
@@ -742,10 +742,9 @@ public class MEncoderVideo extends Player {
 	 *
 	 *     1) configuration.isMencoderDisableSubs()
 	 *     2) params.sid == null
-	 *     3) avisynth()
 	 */
 	private boolean isDisableSubtitles(OutputParams params) {
-		return configuration.isDisableSubtitles() || (params.sid == null) || avisynth();
+		return configuration.isDisableSubtitles() || (params.sid == null);
 	}
 
 	@Override
@@ -848,7 +847,7 @@ public class MEncoderVideo extends Player {
 
 		final boolean isTSMuxerVideoEngineEnabled = PMS.getConfiguration().getEnginesAsList().contains(TsMuxeRVideo.ID);
 		final boolean mencoderAC3RemuxAudioDelayBug = (params.aid != null) && (params.aid.getAudioProperties().getAudioDelay() != 0) && (params.timeseek == 0);
-		if (!mencoderAC3RemuxAudioDelayBug && configuration.isAudioRemuxAC3() && params.aid != null && params.aid.isAC3() && !ps3_and_stereo_and_384_kbits && !avisynth() && params.mediaRenderer.isTranscodeToAC3()) {
+		if (!mencoderAC3RemuxAudioDelayBug && configuration.isAudioRemuxAC3() && params.aid != null && params.aid.isAC3() && !ps3_and_stereo_and_384_kbits && params.mediaRenderer.isTranscodeToAC3()) {
 			// AC3 remux takes priority
 			ac3Remux = true;
 		} else {
@@ -859,7 +858,6 @@ public class MEncoderVideo extends Player {
 					configuration.isMencoderRemuxMPEG2()
 				) && params.aid != null &&
 				params.aid.isDTS() &&
-				!avisynth() &&
 				params.mediaRenderer.isDTSPlayable();
 			pcm = isTSMuxerVideoEngineEnabled && configuration.isAudioUsePCM() &&
 				(
@@ -897,10 +895,6 @@ public class MEncoderVideo extends Player {
 		// mpeg2 remux still buggy with mencoder :\
 		// TODO when we can still use it?
 		ovccopy = false;
-
-		if (pcm && avisynth()) {
-			params.avidemux = true;
-		}
 
 		int channels;
 		if (ac3Remux) {
@@ -966,7 +960,7 @@ public class MEncoderVideo extends Player {
 				if (handleToken) {
 					token += ":threads=" + nThreads;
 
-					if (configuration.getSkipLoopFilterEnabled() && !avisynth()) {
+					if (configuration.getSkipLoopFilterEnabled()) {
 						token += ":skiploopfilter=all";
 					}
 
@@ -1082,7 +1076,7 @@ public class MEncoderVideo extends Player {
 
 		StringBuilder sb = new StringBuilder();
 		// Set subtitles options
-		if (!configuration.isDisableSubtitles() && !avisynth() && params.sid != null) {
+		if (!configuration.isDisableSubtitles() && params.sid != null) {
 			int subtitleMargin = 0;
 			int userMargin     = 0;
 
@@ -1297,7 +1291,7 @@ public class MEncoderVideo extends Player {
 			}
 		}
 
-		if (!dtsRemux && !pcm && !avisynth() && params.aid != null && media.getAudioTracksList().size() > 1) {
+		if (!dtsRemux && !pcm && params.aid != null && media.getAudioTracksList().size() > 1) {
 			cmdList.add("-aid");
 			boolean lavf = false; // TODO Need to add support for LAVF demuxing
 			cmdList.add("" + (lavf ? params.aid.getId() + 1 : params.aid.getId()));
@@ -1373,7 +1367,7 @@ public class MEncoderVideo extends Player {
 		 * subtitle stuff
 		 */
 		// external subtitles file
-		if (!configuration.isDisableSubtitles() && !avisynth() && params.sid != null && params.sid.isExternal()) {
+		if (!configuration.isDisableSubtitles() && params.sid != null && params.sid.isExternal()) {
 			if (params.sid.getType() == SubtitleType.VOBSUB) {
 				cmdList.add("-vobsub");
 				cmdList.add(externalSubtitlesFileName.substring(0, externalSubtitlesFileName.length() - 4));
@@ -1411,7 +1405,7 @@ public class MEncoderVideo extends Player {
 			|| (configuration.isMencoderScaler() && (configuration.getMencoderScaleX() != 0 || configuration.getMencoderScaleY() != 0))
 			|| (intOCW > 0 || intOCH > 0);
 
-		if ((deinterlace || scaleBool) && !avisynth()) {
+		if ((deinterlace || scaleBool)) {
 			StringBuilder vfValueOverscanPrepend = new StringBuilder();
 			StringBuilder vfValueOverscanMiddle  = new StringBuilder();
 			StringBuilder vfValueVS              = new StringBuilder();

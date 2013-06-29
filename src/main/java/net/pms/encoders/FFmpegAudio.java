@@ -32,6 +32,8 @@ import net.pms.io.ProcessWrapper;
 import net.pms.io.ProcessWrapperImpl;
 import net.pms.network.HTTPResource;
 import net.pms.util.PlayerUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -40,9 +42,6 @@ import java.awt.event.ItemListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class FFmpegAudio extends FFmpegVideo {
 	public static final String ID = "ffmpegaudio";
@@ -101,10 +100,6 @@ public class FFmpegAudio extends FFmpegVideo {
 	@Override
 	public boolean isTimeSeekable() {
 		return true;
-	}
-
-	public boolean avisynth() {
-		return false;
 	}
 
 	@Override
