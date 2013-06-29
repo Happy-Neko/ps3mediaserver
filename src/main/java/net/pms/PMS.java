@@ -642,7 +642,7 @@ public class PMS {
 				if (Platform.isSolaris()) {
 					return new NativeSolarisUtils();
 				} else {
-					return new BasicSystemUtils();
+					return new GenericSystemUtils();
 				}
 			}
 		}

@@ -19,6 +19,7 @@
 package net.pms.network;
 
 import net.pms.PMS;
+import net.pms.configuration.PmsConfiguration;
 import net.pms.configuration.RendererConfiguration;
 import net.pms.external.StartStopListenerDelegate;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -41,6 +42,7 @@ import java.util.regex.Pattern;
 
 public class RequestHandlerV2 extends SimpleChannelUpstreamHandler {
 	private static final Logger logger = LoggerFactory.getLogger(RequestHandlerV2.class);
+	private static final PmsConfiguration configuration = PMS.getConfiguration();
 
 	private static final Pattern TIMERANGE_PATTERN = Pattern.compile(
 		"timeseekrange\\.dlna\\.org\\W*npt\\W*=\\W*([\\d\\.:]+)?\\-?([\\d\\.:]+)?",
@@ -93,7 +95,9 @@ public class RequestHandlerV2 extends SimpleChannelUpstreamHandler {
 		}
 
 		logger.trace("Opened request handler on socket " + remoteAddress);
-		PMS.get().getRegistry().disableGoToSleep();
+		if (configuration.isPreventsSleep()) {
+			PMS.get().getRegistry().disableOSSleepMode();
+		}
 
 		if (HttpMethod.GET.equals(nettyRequest.getMethod())) {
 			request = new RequestV2("GET", nettyRequest.getUri().substring(1));

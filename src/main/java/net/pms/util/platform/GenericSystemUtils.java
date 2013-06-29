@@ -41,20 +41,20 @@ import java.net.URISyntaxException;
  * @author zsombor
  *
  */
-public class BasicSystemUtils implements SystemUtils {
-	private final static Logger logger = LoggerFactory.getLogger(BasicSystemUtils.class); 
+public class GenericSystemUtils implements SystemUtils {
+	private final static Logger logger = LoggerFactory.getLogger(GenericSystemUtils.class);
 
 	protected String vlcp;
 	protected String vlcv;
 	protected boolean avis;
 
 	@Override
-	public void disableGoToSleep() {
+	public void disableOSSleepMode() {
 
 	}
 
 	@Override
-	public void reenableGoToSleep() {
+	public void enableOSSleepMode() {
 
 	}
 

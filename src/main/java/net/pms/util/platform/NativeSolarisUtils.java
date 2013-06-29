@@ -24,7 +24,7 @@ package net.pms.util.platform;
  * @author zsombor
  *
  */
-public class NativeSolarisUtils extends BasicSystemUtils {
+public class NativeSolarisUtils extends GenericSystemUtils {
 
 	/**
 	 * Return the Solaris specific ping command for the given host address,

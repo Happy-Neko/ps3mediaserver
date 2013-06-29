@@ -19,6 +19,7 @@
 package net.pms.network;
 
 import net.pms.PMS;
+import net.pms.configuration.PmsConfiguration;
 import net.pms.configuration.RendererConfiguration;
 import net.pms.external.StartStopListenerDelegate;
 import org.slf4j.Logger;
@@ -39,6 +40,7 @@ public class RequestHandler implements Runnable {
 	private Socket socket;
 	private OutputStream output;
 	private BufferedReader br;
+	private static final PmsConfiguration configuration = PMS.getConfiguration();
 
 	// Used to filter out known headers when the renderer is not recognized
 	private final static String[] KNOWN_HEADERS = {
@@ -86,7 +88,9 @@ public class RequestHandler implements Runnable {
 			}
 
 			logger.trace("Opened request handler on socket " + socket);
-			PMS.get().getRegistry().disableGoToSleep();
+			if (configuration.isPreventsSleep()) {
+				PMS.get().getRegistry().disableOSSleepMode();
+			}
 
 			while (headerLine != null && headerLine.length() > 0) {
 				logger.trace("Received on socket: " + headerLine);
@@ -262,7 +266,9 @@ public class RequestHandler implements Runnable {
 			}
 		} finally {
 			try {
-				PMS.get().getRegistry().reenableGoToSleep();
+				if (configuration.isPreventsSleep()) {
+					PMS.get().getRegistry().enableOSSleepMode();
+				}
 				output.close();
 				br.close();
 				socket.close();

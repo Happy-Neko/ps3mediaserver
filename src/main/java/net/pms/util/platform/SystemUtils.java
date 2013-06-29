@@ -7,10 +7,15 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 
 public interface SystemUtils {
+	/**
+	 * Prevent PC from going into sleep mode.
+	 */
+	public abstract void disableOSSleepMode();
 
-	public abstract void disableGoToSleep();
-
-	public abstract void reenableGoToSleep();
+	/**
+	 * Allow PC to go into sleep mode.
+	 */
+	public abstract void enableOSSleepMode();
 
 	public abstract File getAvsPluginsDir();
 

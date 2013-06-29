@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class NativeMacSystemUtils extends BasicSystemUtils {
+public class NativeMacSystemUtils extends GenericSystemUtils {
 	private final static Logger logger = LoggerFactory.getLogger(NativeMacSystemUtils.class);
 
 	public NativeMacSystemUtils() { }

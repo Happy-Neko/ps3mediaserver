@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.lang.reflect.Method;
 import java.nio.CharBuffer;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.prefs.Preferences;
 
 /**
@@ -37,7 +38,7 @@ import java.util.prefs.Preferences;
  * @author zsombor
  *
  */
-public class NativeWindowsUtils extends BasicSystemUtils implements SystemUtils {
+public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtils {
 	private static final Logger logger = LoggerFactory.getLogger(NativeWindowsUtils.class);
 	private static final PmsConfiguration configuration = PMS.getConfiguration();
 
@@ -69,32 +70,27 @@ public class NativeWindowsUtils extends BasicSystemUtils implements SystemUtils 
 	private static final int KEY_READ = 0x20019;
 	private boolean kerio;
 	private String avsPluginsDir;
-	public long lastDontSleepCall = 0;
-	public long lastGoToSleepCall = 0;
 
-	/* (non-Javadoc)
-	 * @see net.pms.util.platform.SystemUtils#disableGoToSleep()
-	 */
+	private static final AtomicLong disableOSSleepModeCallTime = new AtomicLong(0);
+	private static final AtomicLong enableOSSleepModeCallTime = new AtomicLong(0);
+	private static final long OSSleepAPICallsTimeout = 40000; // 40 seconds.
+
 	@Override
-	public void disableGoToSleep() {
-		// Disable go to sleep (every 40s)
-		if (configuration.isPreventsSleep() && System.currentTimeMillis() - lastDontSleepCall > 40000) {
+	public void disableOSSleepMode() {
+		// Skip if last method call was less than OSSleepAPICallsTimeout milliseconds ago.
+		if (System.currentTimeMillis() - disableOSSleepModeCallTime.get() > OSSleepAPICallsTimeout) {
+			disableOSSleepModeCallTime.set(System.currentTimeMillis());
 			logger.trace("Calling SetThreadExecutionState ES_SYSTEM_REQUIRED");
 			Kernel32.INSTANCE.SetThreadExecutionState(Kernel32.ES_SYSTEM_REQUIRED | Kernel32.ES_CONTINUOUS);
-			lastDontSleepCall = System.currentTimeMillis();
 		}
 	}
 
-	/* (non-Javadoc)
-	 * @see net.pms.util.platform.SystemUtils#reenableGoToSleep()
-	 */
 	@Override
-	public void reenableGoToSleep() {
-		// Reenable go to sleep
-		if (configuration.isPreventsSleep() && System.currentTimeMillis() - lastGoToSleepCall > 40000) {
+	public void enableOSSleepMode() {
+		if (configuration.isPreventsSleep() && System.currentTimeMillis() - enableOSSleepModeCallTime.get() > OSSleepAPICallsTimeout) {
+			enableOSSleepModeCallTime.set(System.currentTimeMillis());
 			logger.trace("Calling SetThreadExecutionState ES_CONTINUOUS");
 			Kernel32.INSTANCE.SetThreadExecutionState(Kernel32.ES_CONTINUOUS);
-			lastGoToSleepCall = System.currentTimeMillis();
 		}
 	}
 
