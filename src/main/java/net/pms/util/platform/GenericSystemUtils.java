@@ -73,7 +73,7 @@ public class GenericSystemUtils implements SystemUtils {
 	}
 
 	@Override
-	public boolean isKerioFirewall() {
+	public boolean isKerioFirewallInstalled() {
 		return false;
 	}
 

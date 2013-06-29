@@ -42,7 +42,7 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 	private static final PmsConfiguration configuration = PMS.getConfiguration();
 
 	private static final int KEY_READ = 0x20019;
-	private boolean kerio;
+	private boolean isKerioFirewallInstalled = false;
 
 	private static final AtomicLong disableOSSleepModeCallTime = new AtomicLong(0);
 	private static final AtomicLong enableOSSleepModeCallTime = new AtomicLong(0);
@@ -162,6 +162,7 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 	}
 
 	public NativeWindowsUtils() {
+		super();
 		start();
 	}
 
@@ -202,7 +203,7 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 				key = "SOFTWARE\\Kerio";
 				handles = (int[]) openKey.invoke(systemRoot, -2147483646, toCstr(key), KEY_READ);
 				if (handles.length == 2 && handles[0] != 0 && handles[1] == 0) {
-					kerio = true;
+					isKerioFirewallInstalled = true;
 				}
 			}
 		} catch (Exception e) {
@@ -210,12 +211,9 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 		}
 	}
 
-	/* (non-Javadoc)
-	 * @see net.pms.util.platform.SystemUtils#isKerioFirewall()
-	 */
 	@Override
-	public boolean isKerioFirewall() {
-		return kerio;
+	public boolean isKerioFirewallInstalled() {
+		return isKerioFirewallInstalled;
 	}
 
 	private static byte[] toCstr(String str) {

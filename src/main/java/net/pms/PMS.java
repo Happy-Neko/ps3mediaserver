@@ -490,7 +490,7 @@ public class PMS {
 		}
 
 		// check if Kerio is installed
-		if (registry.isKerioFirewall()) {
+		if (registry.isKerioFirewallInstalled()) {
 			logger.info("Detected Kerio firewall");
 		}
 

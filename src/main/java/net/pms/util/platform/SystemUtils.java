@@ -28,7 +28,11 @@ public interface SystemUtils {
 
 	public abstract String getDiskLabel(File f);
 
-	public abstract boolean isKerioFirewall();
+	/**
+	 * Tests if Kerio Firewall is installed.
+	 * @return {@code true} if Kerio Firewall is installed, {@code false} otherwise.
+	 */
+	public abstract boolean isKerioFirewallInstalled();
 
 	public abstract String getVlcPath();
 
