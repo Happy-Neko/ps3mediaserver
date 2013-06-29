@@ -69,7 +69,6 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 
 	private static final int KEY_READ = 0x20019;
 	private boolean kerio;
-	private String avsPluginsDir;
 
 	private static final AtomicLong disableOSSleepModeCallTime = new AtomicLong(0);
 	private static final AtomicLong enableOSSleepModeCallTime = new AtomicLong(0);
@@ -92,21 +91,6 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 			logger.trace("Calling SetThreadExecutionState ES_CONTINUOUS");
 			Kernel32.INSTANCE.SetThreadExecutionState(Kernel32.ES_CONTINUOUS);
 		}
-	}
-
-	/* (non-Javadoc)
-	 * @see net.pms.util.platform.SystemUtils#getAvsPluginsDir()
-	 */
-	@Override
-	public File getAvsPluginsDir() {
-		if (avsPluginsDir == null) {
-			return null;
-		}
-		File pluginsDir = new File(avsPluginsDir);
-		if (!pluginsDir.exists()) {
-			pluginsDir = null;
-		}
-		return pluginsDir;
 	}
 
 	/* (non-Javadoc)
@@ -243,20 +227,6 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 					vlcp = (valb != null ? new String(valb).trim() : null);
 					valb = (byte[]) winRegQueryValue.invoke(systemRoot, handles[0], toCstr("Version"));
 					vlcv = (valb != null ? new String(valb).trim() : null);
-					closeKey.invoke(systemRoot, handles[0]);
-				}
-
-				// Check if AviSynth is installed
-				key = "SOFTWARE\\AviSynth";
-				handles = (int[]) openKey.invoke(systemRoot, -2147483646, toCstr(key), KEY_READ);
-				if (!(handles.length == 2 && handles[0] != 0 && handles[1] == 0)) {
-					key = "SOFTWARE\\Wow6432Node\\AviSynth";
-					handles = (int[]) openKey.invoke(systemRoot, -2147483646, toCstr(key), KEY_READ);
-				}
-				if (handles.length == 2 && handles[0] != 0 && handles[1] == 0) {
-					avis = true;
-					valb = (byte[]) winRegQueryValue.invoke(systemRoot, handles[0], toCstr("plugindir2_5"));
-					avsPluginsDir = (valb != null ? new String(valb).trim() : null);
 					closeKey.invoke(systemRoot, handles[0]);
 				}
 

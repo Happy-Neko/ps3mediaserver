@@ -46,7 +46,6 @@ public class GenericSystemUtils implements SystemUtils {
 
 	protected String vlcp;
 	protected String vlcv;
-	protected boolean avis;
 
 	@Override
 	public void disableOSSleepMode() {
@@ -56,11 +55,6 @@ public class GenericSystemUtils implements SystemUtils {
 	@Override
 	public void enableOSSleepMode() {
 
-	}
-
-	@Override
-	public File getAvsPluginsDir() {
-		return null;
 	}
 
 	@Override
@@ -101,16 +95,6 @@ public class GenericSystemUtils implements SystemUtils {
 	@Override
 	public String getVlcVersion() {
 		return vlcv;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see net.pms.util.platform.SystemUtils#isAvis()
-	 */
-	@Override
-	public boolean isAvis() {
-		return avis;
 	}
 
 	@Override

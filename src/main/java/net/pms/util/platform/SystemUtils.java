@@ -17,8 +17,6 @@ public interface SystemUtils {
 	 */
 	public abstract void enableOSSleepMode();
 
-	public abstract File getAvsPluginsDir();
-
 	public abstract String getShortPathNameW(String longPathName);
 
 	public abstract String getWindowsDirectory();
@@ -30,8 +28,6 @@ public interface SystemUtils {
 	public abstract String getVlcPath();
 
 	public abstract String getVlcVersion();
-
-	public abstract boolean isAvis();
 
 	/**
 	 * Open HTTP URLs in the default browser.

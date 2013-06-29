@@ -474,15 +474,6 @@ public class PMS {
 
 		logger.info("Done!");
 
-		// check the existence of Vsfilter.dll
-		if (registry.isAvis() && registry.getAvsPluginsDir() != null) {
-			logger.info("Found AviSynth plugins dir: " + registry.getAvsPluginsDir().getAbsolutePath());
-			File vsFilterdll = new File(registry.getAvsPluginsDir(), "VSFilter.dll");
-			if (!vsFilterdll.exists()) {
-				logger.info("VSFilter.dll is not in the AviSynth plugins directory. This can cause problems when trying to play subtitled videos with AviSynth");
-			}
-		}
-
 		// Check if VLC is found
 		String vlcVersion = registry.getVlcVersion();
 		String vlcPath = registry.getVlcPath();
