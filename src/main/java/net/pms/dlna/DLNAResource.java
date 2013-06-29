@@ -19,7 +19,6 @@
 package net.pms.dlna;
 
 import com.floreysoft.jmte.Engine;
-
 import net.pms.Messages;
 import net.pms.PMS;
 import net.pms.configuration.FormatConfiguration;
@@ -41,10 +40,8 @@ import net.pms.network.HTTPResource;
 import net.pms.util.ImagesUtil;
 import net.pms.util.Iso639;
 import net.pms.util.MpegUtil;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +54,6 @@ import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
 
 import static net.pms.util.StringUtil.*;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -226,12 +222,6 @@ public abstract class DLNAResource extends HTTPResource implements Cloneable, Ru
 	protected RendererConfiguration defaultRenderer;
 
 	private String dlnaspec;
-
-	/**
-	 * @deprecated Use standard getter and setter to access this field.
-	 */
-	@Deprecated
-	protected boolean avisynth;
 
 	/**
 	 * @deprecated Use standard getter and setter to access this field.
@@ -1034,12 +1024,6 @@ public abstract class DLNAResource extends HTTPResource implements Cloneable, Ru
 			return displayName;
 		}
 
-		// Is this still relevant? The player name already contains "AviSynth"
-		if (isAvisynth()) {
-			displayName = (getPlayer() != null ? ("[" + getPlayer().name()) : "") + " + AviSynth]";
-			return displayName;
-		}
-
 		String template;
 		String audioLangFullName = "";
 		String audioLangShortName = "";
@@ -1216,11 +1200,6 @@ public abstract class DLNAResource extends HTTPResource implements Cloneable, Ru
 		if (id != null) {
 			String code = Iso639.getISO639_2Code(id.toLowerCase());
 			sb.append("codes/").append(code).append(".png");
-			return sb.toString();
-		}
-
-		if (isAvisynth()) {
-			sb.append("logo-avisynth.png");
 			return sb.toString();
 		}
 
@@ -2469,26 +2448,6 @@ public abstract class DLNAResource extends HTTPResource implements Cloneable, Ru
 	 */
 	protected void setDefaultRenderer(RendererConfiguration defaultRenderer) {
 		this.defaultRenderer = defaultRenderer;
-	}
-
-	/**
-	 * Returns whether or not this resource is handled by AviSynth.
-	 *
-	 * @return True if handled by AviSynth, otherwise false.
-	 * @since 1.50.0
-	 */
-	protected boolean isAvisynth() {
-		return avisynth;
-	}
-
-	/**
-	 * Sets whether or not this resource is handled by AviSynth.
-	 *
-	 * @param avisynth Set to true if handled by Avisyth, otherwise false.
-	 * @since 1.50.0
-	 */
-	protected void setAvisynth(boolean avisynth) {
-		this.avisynth = avisynth;
 	}
 
 	/**
