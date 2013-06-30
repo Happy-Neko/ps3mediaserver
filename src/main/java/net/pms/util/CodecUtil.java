@@ -19,19 +19,23 @@
  */
 package net.pms.util;
 
+import com.sun.jna.Native;
 import com.sun.jna.Platform;
-import net.pms.PMS;
 import net.pms.configuration.PmsConfiguration;
 import net.pms.dlna.DLNAMediaAudio;
+import net.pms.util.platform.Kernel32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.ArrayList;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+
 public class CodecUtil {
 	private static final Logger logger = LoggerFactory.getLogger(CodecUtil.class);
 	private static final ArrayList<String> codecs = new ArrayList<String>();
+	private static String defaultFontPath = null;
 
 	static {
 		// Make sure the list of codecs is initialized before other threads start retrieving it
@@ -84,55 +88,68 @@ public class CodecUtil {
 		return defaultBitrate;
 	}
 
-	public static String getDefaultFontPath() {
-		String font = null;
-		if (Platform.isWindows()) {
-			// get Windows Arial
-			String winDir = PMS.get().getRegistry().getWindowsDirectory();
-			if (winDir != null) {
-				File winDirFile = new File(winDir);
-				if (winDirFile.exists()) {
-					File fontsDir = new File(winDirFile, "Fonts");
-					if (fontsDir.exists()) {
-						File arialDir = new File(fontsDir, "Arial.ttf");
-						if (arialDir.exists()) {
-							font = arialDir.getAbsolutePath();
-						} else {
-							arialDir = new File(fontsDir, "arial.ttf");
+	public static synchronized String getDefaultFontPath() {
+		if (defaultFontPath == null) {
+			defaultFontPath = "";
+			if (Platform.isWindows()) {
+				// get Windows Arial
+				final String winDir = getWindowsDirectory();
+				if (winDir != null) {
+					File winDirFile = new File(winDir);
+					if (winDirFile.exists()) {
+						File fontsDir = new File(winDirFile, "Fonts");
+						if (fontsDir.exists()) {
+							File arialDir = new File(fontsDir, "Arial.ttf");
 							if (arialDir.exists()) {
-								font = arialDir.getAbsolutePath();
+								defaultFontPath = arialDir.getAbsolutePath();
+							} else {
+								arialDir = new File(fontsDir, "arial.ttf");
+								if (arialDir.exists()) {
+									defaultFontPath = arialDir.getAbsolutePath();
+								}
 							}
 						}
 					}
 				}
+				if (isBlank(defaultFontPath)) {
+					defaultFontPath = getFont("C:\\Windows\\Fonts", "Arial.ttf");
+				}
+				if (isBlank(defaultFontPath)) {
+					defaultFontPath = getFont("C:\\WINNT\\Fonts", "Arial.ttf");
+				}
+				if (isBlank(defaultFontPath)) {
+					defaultFontPath = getFont("D:\\Windows\\Fonts", "Arial.ttf");
+				}
+				if (isBlank(defaultFontPath)) {
+					defaultFontPath = getFont(".\\win32\\mplayer\\", "subfont.ttf");
+				}
+				return defaultFontPath;
+			} else if (Platform.isLinux()) {
+				// get Linux default font
+				defaultFontPath = getFont("/usr/share/fonts/truetype/msttcorefonts/", "Arial.ttf");
+				if (isBlank(defaultFontPath)) {
+					defaultFontPath = getFont("/usr/share/fonts/truetype/ttf-bitstream-veras/", "Vera.ttf");
+				}
+				if (isBlank(defaultFontPath)) {
+					defaultFontPath = getFont("/usr/share/fonts/truetype/ttf-dejavu/", "DejaVuSans.ttf");
+				}
+				return defaultFontPath;
+			} else if (Platform.isMac()) {
+				// get default osx font
+				defaultFontPath = getFont("/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Home/lib/fonts/", "LucidaSansRegular.ttf");
+				return defaultFontPath;
 			}
-			if (font == null) {
-				font = getFont("C:\\Windows\\Fonts", "Arial.ttf");
-			}
-			if (font == null) {
-				font = getFont("C:\\WINNT\\Fonts", "Arial.ttf");
-			}
-			if (font == null) {
-				font = getFont("D:\\Windows\\Fonts", "Arial.ttf");
-			}
-			if (font == null) {
-				font = getFont(".\\win32\\mplayer\\", "subfont.ttf");
-			}
-			return font;
-		} else if (Platform.isLinux()) {
-			// get Linux default font
-			font = getFont("/usr/share/fonts/truetype/msttcorefonts/", "Arial.ttf");
-			if (font == null) {
-				font = getFont("/usr/share/fonts/truetype/ttf-bitstream-veras/", "Vera.ttf");
-			}
-			if (font == null) {
-				font = getFont("/usr/share/fonts/truetype/ttf-dejavu/", "DejaVuSans.ttf");
-			}
-			return font;
-		} else if (Platform.isMac()) {
-			// get default osx font
-			font = getFont("/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Home/lib/fonts/", "LucidaSansRegular.ttf");
-			return font;
+			return defaultFontPath;
+		} else {
+			return defaultFontPath;
+		}
+	}
+
+	private static String getWindowsDirectory() {
+		char test[] = new char[2 + 256 * 2];
+		int r = Kernel32.INSTANCE.GetWindowsDirectoryW(test, 256);
+		if (r > 0) {
+			return Native.toString(test);
 		}
 		return null;
 	}

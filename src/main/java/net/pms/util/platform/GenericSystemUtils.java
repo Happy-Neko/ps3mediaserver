@@ -61,11 +61,6 @@ public class GenericSystemUtils implements SystemUtils {
 	}
 
 	@Override
-	public String getWindowsDirectory() {
-		return null;
-	}
-
-	@Override
 	public String getDiskLabel(File f) {
 		return null;
 	}

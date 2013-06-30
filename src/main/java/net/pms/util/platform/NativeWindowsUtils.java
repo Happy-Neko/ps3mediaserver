@@ -99,16 +99,6 @@ public class NativeWindowsUtils extends GenericSystemUtils implements SystemUtil
 		return longPathName;
 	}
 
-	@Override
-	public String getWindowsDirectory() {
-		char test[] = new char[2 + 256 * 2];
-		int r = Kernel32.INSTANCE.GetWindowsDirectoryW(test, 256);
-		if (r > 0) {
-			return Native.toString(test);
-		}
-		return null;
-	}
-
 	/* (non-Javadoc)
 	 * @see net.pms.util.platform.SystemUtils#getDiskLabel(java.io.File)
 	 */

@@ -22,8 +22,6 @@ public interface SystemUtils {
 	 */
 	public abstract String getShortPathName(String longPathName);
 
-	public abstract String getWindowsDirectory();
-
 	public abstract String getDiskLabel(File f);
 
 	/**
