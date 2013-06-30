@@ -2,8 +2,6 @@ package net.pms.util.platform;
 
 import net.pms.newgui.LooksFrame;
 
-import java.io.File;
-
 public interface SystemUtils {
 	/**
 	 * Prevent PC from going into sleep mode.
@@ -21,8 +19,6 @@ public interface SystemUtils {
 	 * @return short path if relevant of unchanged {@code longPathName}.
 	 */
 	public abstract String getShortPathName(String longPathName);
-
-	public abstract String getDiskLabel(File f);
 
 	/**
 	 * Tests if Kerio Firewall is installed.

@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -58,11 +57,6 @@ public class GenericSystemUtils implements SystemUtils {
 	@Override
 	public String getShortPathName(String longPathName) {
 		return longPathName;
-	}
-
-	@Override
-	public String getDiskLabel(File f) {
-		return null;
 	}
 
 	@Override

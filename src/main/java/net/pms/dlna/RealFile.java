@@ -19,17 +19,20 @@
 package net.pms.dlna;
 
 import com.sun.jna.Platform;
+import com.sun.jna.ptr.LongByReference;
 import net.pms.PMS;
 import net.pms.configuration.PmsConfiguration;
 import net.pms.formats.Format;
 import net.pms.formats.FormatFactory;
 import net.pms.util.FileUtil;
 import net.pms.util.ProcessUtil;
+import net.pms.util.platform.Kernel32;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.CharBuffer;
 import java.util.ArrayList;
 
 public class RealFile extends MapFile {
@@ -124,7 +127,7 @@ public class RealFile extends MapFile {
 			File file = getFile();
 			if (file.getName().trim().isEmpty()) {
 				if (Platform.isWindows()) {
-					name = PMS.get().getRegistry().getDiskLabel(file);
+					name = getDiskLabel(file);
 				}
 				if (name != null && name.length() > 0) {
 					name = file.getAbsolutePath().substring(0, 1) + ":\\ [" + name + "]";
@@ -137,6 +140,54 @@ public class RealFile extends MapFile {
 			this.getConf().setName(name);
 		}
 		return this.getConf().getName();
+	}
+
+	private static String getDiskLabel(File f) {
+		String driveName;
+		try {
+			driveName = f.getCanonicalPath().substring(0, 2) + "\\";
+
+			char[] lpRootPathName_chars = new char[4];
+			for (int i = 0; i < 3; i++) {
+				lpRootPathName_chars[i] = driveName.charAt(i);
+			}
+			lpRootPathName_chars[3] = '\0';
+			int nVolumeNameSize = 256;
+			CharBuffer lpVolumeNameBuffer_char = CharBuffer.allocate(nVolumeNameSize);
+			LongByReference lpVolumeSerialNumber = new LongByReference();
+			LongByReference lpMaximumComponentLength = new LongByReference();
+			LongByReference lpFileSystemFlags = new LongByReference();
+			int nFileSystemNameSize = 256;
+			CharBuffer lpFileSystemNameBuffer_char = CharBuffer.allocate(nFileSystemNameSize);
+
+			boolean result2 = Kernel32.INSTANCE.GetVolumeInformationW(
+					lpRootPathName_chars,
+					lpVolumeNameBuffer_char,
+					nVolumeNameSize,
+					lpVolumeSerialNumber,
+					lpMaximumComponentLength,
+					lpFileSystemFlags,
+					lpFileSystemNameBuffer_char,
+					nFileSystemNameSize);
+			if (!result2) {
+				return null;
+			}
+			String diskLabel = charString2String(lpVolumeNameBuffer_char);
+			return diskLabel;
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	private static String charString2String(CharBuffer buf) {
+		char[] chars = buf.array();
+		int i;
+		for (i = 0; i < chars.length; i++) {
+			if (chars[i] == '\0') {
+				break;
+			}
+		}
+		return new String(chars, 0, i);
 	}
 
 	@Override
